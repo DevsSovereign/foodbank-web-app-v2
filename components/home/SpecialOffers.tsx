@@ -191,7 +191,7 @@ export default function SpecialOffers({
     if (cartPendingIds.has(productId)) return;
     setCartPendingIds((prev) => new Set(prev).add(productId));
     try {
-      await cartService.addToCart({ packageId: productId, quantity: 1 });
+      await cartService.addToCart({ productId, quantity: 1 });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to add to cart.";
       toast({ variant: "error", title: message });

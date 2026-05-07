@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable @next/next/no-page-custom-font */
 import type { Metadata } from "next";
-// @ts-expect-error
 import "./globals.css";
 
 import AosInit from "@/components/AosInit";

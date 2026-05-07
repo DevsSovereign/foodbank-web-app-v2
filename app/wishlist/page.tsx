@@ -64,27 +64,44 @@ export default function WishlistPage() {
   };
 
   const addToCart = async (productId: string) => {
-    const token = typeof window !== "undefined" ? sessionStorage.getItem("fb4u_token") : null;
-    if (!token) {
-      window.location.href = "/login";
-      return;
-    }
-    if (cartPendingIds.has(productId)) return;
+  const token =
+    typeof window !== "undefined" ? sessionStorage.getItem("fb4u_token") : null;
 
-    setCartPendingIds((prev) => new Set(prev).add(productId));
-    try {
-      await cartService.addToCart({ packageId: productId, quantity: 1 });
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to add to cart.";
-      toast({ variant: "error", title: message });
-    } finally {
-      setCartPendingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(productId);
-        return next;
-      });
-    }
-  };
+  if (!token) {
+    window.location.href = "/login";
+    return;
+  }
+
+  if (cartPendingIds.has(productId)) return;
+
+  setCartPendingIds((prev) => new Set(prev).add(productId));
+
+  try {
+    await cartService.addToCart({
+      productId,
+      quantity: 1,
+    });
+
+    toast({
+      variant: "success",
+      title: "Item added to cart.",
+    });
+  } catch (err) {
+    const message =
+      err instanceof ApiError ? err.message : "Failed to add to cart.";
+
+    toast({
+      variant: "error",
+      title: message,
+    });
+  } finally {
+    setCartPendingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(productId);
+      return next;
+    });
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col bg-white">

@@ -76,7 +76,7 @@ export default function AddressSearch({
           onChange={(e) => setValue(e.target.value)}
           autoComplete="off"
         />
-        {value && (
+        {value && value.length > 0 ? (
           <button
             className="text-gray-400 hover:text-gray-600 ml-3 shrink-0 transition cursor-pointer"
             onMouseDown={(e) => {
@@ -86,19 +86,36 @@ export default function AddressSearch({
           >
             <X className="size-4" />
           </button>
+        ) : (
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onUseCurrentLocation();
+              clearSuggestions();
+            }}
+            disabled={isLocating}
+            className="text-gray-400 hover:text-gray-600 ml-3 shrink-0 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+          >
+            {isLocating ? (
+              <Loader2 className="size-5 text-black shrink-0 animate-spin" />
+            ) : (
+              <LocateFixed className="size-5 animate-pulse text-[#fb2c36] shrink-0" />
+            )}
+          </button>
         )}
       </div>
 
       {/* Dropdown — shows on focus when empty OR when there are suggestions */}
-      <div
-        className={`absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] border border-gray-100 py-2 max-h-80 overflow-y-auto transition-all duration-150 ${
-          showDropdown
-            ? "opacity-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 -translate-y-1 pointer-events-none"
-        }`}
-      >
-        {/* Use Current Location */}
-        <button
+      {hasSuggestions && (
+        <div
+          className={`absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] border border-gray-100 py-2 max-h-80 overflow-y-auto transition-all duration-150 ${
+            showDropdown
+              ? "opacity-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 -translate-y-1 pointer-events-none"
+          }`}
+        >
+          {/* Use Current Location */}
+          {/* <button
           className="w-full flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 transition text-left cursor-pointer"
           onMouseDown={(e) => {
             e.preventDefault();
@@ -115,10 +132,10 @@ export default function AddressSearch({
           <span className="text-sm font-bold text-[#70c400]">
             {isLocating ? "Getting location…" : "Use Current Location"}
           </span>
-        </button>
+        </button> */}
 
-        {/* Autocomplete suggestions */}
-        {hasSuggestions && (
+          {/* Autocomplete suggestions */}
+
           <>
             <div className="mx-6 my-1 border-t border-gray-100" />
             {data.map(({ place_id, description, structured_formatting }) => (
@@ -142,8 +159,8 @@ export default function AddressSearch({
               </button>
             ))}
           </>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

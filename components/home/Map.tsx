@@ -26,6 +26,7 @@ export default function HomePageMap() {
   // Silent fetch on mount — setState only inside the async callback, never synchronously
   useEffect(() => {
     if (!navigator.geolocation) return;
+
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         setUserLocation({ lat: coords.latitude, lng: coords.longitude });

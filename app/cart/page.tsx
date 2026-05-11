@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Home, Loader2, Search } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
@@ -17,37 +17,30 @@ import { getAuthToken } from "@/lib/auth-utils";
 import ErrorSection from "@/components/ui/ErrorSection";
 import { handleError } from "@/lib/handle-error";
 import { useToast } from "@/components/ui/toast/ToastProvider";
+import { queryKeys, useGetCartItems } from "@/lib/queries";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function CartPage() {
-  const { toast } = useToast();
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [isInstructionAgreed, setIsInstructionAgreed] = useState<boolean>(false);
   const router = useRouter();
   const token = getAuthToken();
+  const { toast } = useToast();
+  const {
+    data: cartItemsResponse,
+    isLoading: cartItemsLoading,
+    error: cartItemsError,
+    refetch: refetchCartItems,
+  } = useGetCartItems();
+  const queryClient = useQueryClient();
 
-  // ----- Fetch cart items from the API -----
-  const fetchCartItems = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await cartService.getCartItems();
-      const items = (response.data ?? []).map(toCartItem);
-      setCartItems(items);
-    } catch (err) {
-      setError(handleError(err, "Something went wrong while fetching your cart."));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const deliveryCharge = 0;
+  const serviceCharge = 500;
+  const total = subtotal + deliveryCharge + serviceCharge;
 
-  useEffect(() => {
-    if (!token) return;
-
-    fetchCartItems();
-  }, [token, fetchCartItems]);
+  const isEmpty = cartItems.length === 0;
 
   const updateQuantity = (id: string, delta: number) => {
     setCartItems((prev) =>
@@ -64,6 +57,7 @@ export default function CartPage() {
 
     try {
       await cartService.deleteCartItem({ itemId: id });
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getCart] });
     } catch {
       // Roll back on failure and notify the user
       setCartItems(previousItems);
@@ -71,12 +65,14 @@ export default function CartPage() {
     }
   };
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const deliveryCharge = 0;
-  const serviceCharge = 500;
-  const total = subtotal + deliveryCharge + serviceCharge;
+  useEffect(() => {
+    if (!cartItemsResponse) return;
 
-  const isEmpty = cartItems.length === 0;
+    const items = (cartItemsResponse.data ?? []).map(toCartItem);
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCartItems(items);
+  }, [cartItemsResponse]);
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -289,13 +285,13 @@ export default function CartPage() {
             </button>
           </div>
         </section>
-      ) : isLoading ? (
+      ) : cartItemsLoading ? (
         <section className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-24 flex flex-col items-center justify-center text-center">
           <Loader2 className="size-10 text-[#8cc629] animate-spin mb-4" />
           <p className="text-gray-500 text-sm">Loading your cart…</p>
         </section>
-      ) : error ? (
-        <ErrorSection message={error} onRetry={fetchCartItems} />
+      ) : cartItemsError ? (
+        <ErrorSection message={handleError(cartItemsError)} onRetry={refetchCartItems} />
       ) : isEmpty ? (
         <>
           <div className="w-full bg-white border-b border-gray-100 py-3 md:hidden">

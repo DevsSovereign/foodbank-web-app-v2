@@ -10,14 +10,13 @@ import Footer from "@/components/layout/Footer";
 import TopRibbon from "@/components/layout/TopRibbon";
 import NavBar from "@/components/home/NavBar";
 import { useRouter, useSearchParams } from "next/navigation";
-import { categoryService } from "@/lib/services/category.service";
-import type { CategoryDto } from "@/types/category";
-import { productService } from "@/lib/services/product.service";
-import type { ProductDto } from "@/types/product";
 import { wishlistService } from "@/lib/services/wishlist.service";
 import { ApiError } from "@/types/api";
 import { useToast } from "@/components/ui/toast/ToastProvider";
-import { getAuthToken } from "@/lib/auth-utils";
+import { queryKeys, useGetCategories, useGetProducts, useGetWishlistItems } from "@/lib/queries";
+import ErrorSection from "@/components/ui/ErrorSection";
+import { handleError } from "@/lib/handle-error";
+import { useQueryClient } from "@tanstack/react-query";
 
 /** Capitalise each word, e.g. "frozen foods" → "Frozen Foods". */
 function capitalizeWords(str: string): string {
@@ -40,8 +39,23 @@ function SearchPageInner() {
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState(typeParam);
   const [searchText, setSearchText] = useState(q);
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [isCategoriesLoading, setIsCategoriesLoading] = useState(false);
+  const [wishlistIds, setWishlistIds] = useState<Set<string>>(() => new Set());
+  const [wishlistPendingIds, setWishlistPendingIds] = useState<Set<string>>(() => new Set());
+  const [wishlistItemIdByProductId, setWishlistItemIdByProductId] = useState<Map<string, string>>(
+    () => new Map(),
+  );
+  const {
+    data: categoriesData,
+    error: categoriesError,
+    isLoading: isCategoriesLoading,
+  } = useGetCategories();
+  const {
+    data: productsData,
+    error: productsError,
+    isLoading: isProductsLoading,
+  } = useGetProducts();
+  const { data: wishlistItemsData, error: wishlistItemsError } = useGetWishlistItems();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     // Keep UI filter in sync with URL when navigating from the home category links.
@@ -49,100 +63,33 @@ function SearchPageInner() {
   }, [typeParam]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!wishlistItemsData) return;
 
-    async function fetchCategories() {
-      try {
-        setIsCategoriesLoading(true);
-        const response = await categoryService.getCategories();
-        if (cancelled) return;
-        setCategories(response.data ?? []);
-      } catch {
-        if (!cancelled) setCategories([]);
-      } finally {
-        if (!cancelled) setIsCategoriesLoading(false);
+    const map = new Map<string, string>();
+    const ids = new Set<string>();
+    for (const item of wishlistItemsData.data ?? []) {
+      const productId = item.productId ?? item.packageId;
+      const itemId = item.id ?? item._id;
+      if (productId && itemId) {
+        map.set(productId, itemId);
+        ids.add(productId);
       }
     }
-
-    fetchCategories();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const [apiProducts, setApiProducts] = useState<ProductDto[]>([]);
-  const [isProductsLoading, setIsProductsLoading] = useState(false);
-  const [productsError, setProductsError] = useState<string | null>(null);
-  const [wishlistIds, setWishlistIds] = useState<Set<string>>(() => new Set());
-  const [wishlistPendingIds, setWishlistPendingIds] = useState<Set<string>>(() => new Set());
-  const [wishlistItemIdByProductId, setWishlistItemIdByProductId] = useState<Map<string, string>>(
-    () => new Map(),
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchProducts() {
-      try {
-        setIsProductsLoading(true);
-        setProductsError(null);
-        const response = await productService.getProducts();
-        if (cancelled) return;
-        setApiProducts(response ?? []);
-      } catch {
-        if (!cancelled) setProductsError("Failed to load products.");
-      } finally {
-        if (!cancelled) setIsProductsLoading(false);
-      }
-    }
-
-    fetchProducts();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const token = typeof window !== "undefined" ? sessionStorage.getItem("fb4u_token") : null;
-    if (!token) return;
-
-    async function fetchWishlist() {
-      try {
-        const response = await wishlistService.getWishlistItems();
-        if (cancelled) return;
-        const map = new Map<string, string>();
-        const ids = new Set<string>();
-        for (const item of response.data ?? []) {
-          const productId = item.productId ?? item.packageId;
-          const itemId = item.id ?? item._id;
-          if (productId && itemId) {
-            map.set(productId, itemId);
-            ids.add(productId);
-          }
-        }
-        setWishlistItemIdByProductId(map);
-        setWishlistIds(ids);
-      } catch {
-        // ignore on this page
-      }
-    }
-
-    fetchWishlist();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    setWishlistItemIdByProductId(map);
+    setWishlistIds(ids);
+  }, [wishlistItemsData]);
 
   const filteredProducts = useMemo(() => {
-    const list = apiProducts;
+    if (!productsData) return [];
+
+    const list = [...productsData];
     const query = (q || searchText).trim().toLowerCase();
     return list.filter((p) => {
       const matchesQuery = !query || p.name.toLowerCase().includes(query);
       const matchesType = !selectedSort || p.type.toLowerCase() === selectedSort.toLowerCase();
       return matchesQuery && matchesType;
     });
-  }, [apiProducts, q, searchText, selectedSort]);
+  }, [productsData, q, searchText, selectedSort]);
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
@@ -188,17 +135,12 @@ function SearchPageInner() {
   };
 
   const addToWishlist = async (productId: string) => {
-    const token = getAuthToken();
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
     if (wishlistPendingIds.has(productId)) return;
     setWishlistPendingIds((prev) => new Set(prev).add(productId));
 
     try {
       const existingItemId = wishlistItemIdByProductId.get(productId);
+
       if (existingItemId) {
         // Optimistic remove
         setWishlistIds((prev) => {
@@ -213,6 +155,7 @@ function SearchPageInner() {
         });
 
         await wishlistService.deleteWishlistItem({ itemId: existingItemId });
+        await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
         toast({ title: "Removed from wishlist", variant: "info" });
       } else {
         // Optimistic add
@@ -223,6 +166,7 @@ function SearchPageInner() {
         });
 
         await wishlistService.addToWishlist({ productId, quantity: 1 });
+        await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
         toast({
           title: "Added to wishlist",
           description: "You can view it in your wishlist.",
@@ -279,6 +223,31 @@ function SearchPageInner() {
     }
   };
 
+  if (categoriesError) {
+    return (
+      <ErrorSection
+        message={handleError(categoriesError, "Something went wrong while fetching categories.")}
+      />
+    );
+  }
+  if (productsError) {
+    return (
+      <ErrorSection
+        message={handleError(productsError, "Something went wrong while fetching products.")}
+      />
+    );
+  }
+  if (wishlistItemsError) {
+    return (
+      <ErrorSection
+        message={handleError(
+          wishlistItemsError,
+          "Something went wrong while fetching wishlist items.",
+        )}
+      />
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gray-50/50 flex flex-col pt-0">
       <TopRibbon />
@@ -303,14 +272,12 @@ function SearchPageInner() {
             Categories
           </h2>
           <ul className="space-y-4">
-            {isCategoriesLoading && <li className="text-[13px] text-gray-400">Loading…</li>}
-
-            {!isCategoriesLoading && categories.length === 0 && (
-              <li className="text-[13px] text-gray-400">No categories found.</li>
-            )}
-
-            {!isCategoriesLoading &&
-              categories.map((cat, idx) => {
+            {isCategoriesLoading ? (
+              <span className="text-[13px] text-gray-400">Loading…</span>
+            ) : !categoriesData?.data || categoriesData?.data.length === 0 ? (
+              <span className="text-[13px] text-gray-400">No categories found.</span>
+            ) : (
+              categoriesData?.data.map((cat, idx) => {
                 const isSelected = selectedSort === cat.type;
                 return (
                   <li
@@ -335,7 +302,8 @@ function SearchPageInner() {
                     </span>
                   </li>
                 );
-              })}
+              })
+            )}
           </ul>
         </aside>
 
@@ -399,7 +367,7 @@ function SearchPageInner() {
                       Clear sorting
                     </button>
                   )}
-                  {categories.map((cat, idx) => (
+                  {categoriesData?.data.map((cat, idx) => (
                     <button
                       key={cat._id ?? idx}
                       className={`w-full text-left px-4 py-2 text-sm hover:bg-green-50 transition-colors ${selectedSort === cat.type ? "text-[#70c400] font-bold bg-green-50/50" : "text-gray-600"}`}

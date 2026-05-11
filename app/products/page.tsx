@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight, Home, Loader2 } from "lucide-react";
@@ -10,10 +10,11 @@ import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 import NavBar from "@/components/home/NavBar";
 import Footer from "@/components/layout/Footer";
-import { categoryService } from "@/lib/services/category.service";
-import { productService } from "@/lib/services/product.service";
-import type { CategoryDto } from "@/types/category";
+
 import type { ProductDto } from "@/types/product";
+import { useGetCategories, useGetProducts } from "@/lib/queries";
+import ErrorSection from "@/components/ui/ErrorSection";
+import { handleError } from "@/lib/handle-error";
 
 /** Capitalise each word, e.g. "frozen foods" → "Frozen Foods". */
 function capitalizeWords(str: string): string {
@@ -37,60 +38,44 @@ function ProductsPageInner() {
   const pageParamRaw = (searchParams.get("page") ?? "1").trim();
   const pageParam = Number.isFinite(Number(pageParamRaw)) ? Math.max(1, Number(pageParamRaw)) : 1;
 
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [products, setProducts] = useState<ProductDto[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const [cats, prods] = await Promise.all([
-          categoryService.getCategories(),
-          productService.getProducts(),
-        ]);
-        if (cancelled) return;
-
-        setCategories(cats.data ?? []);
-        setProducts(prods ?? []);
-      } catch {
-        if (!cancelled) setError("Failed to load store. Please try again.");
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const {
+    data: categoriesData,
+    error: categoriesError,
+    isLoading: isCategoriesLoading,
+  } = useGetCategories();
+  const {
+    data: productsData,
+    error: productsError,
+    isLoading: isProductsLoading,
+  } = useGetProducts();
 
   const productsByType = useMemo(() => {
+    if (!productsData) return;
+
     const map = new Map<string, ProductDto[]>();
-    for (const p of products) {
+    for (const p of productsData) {
       const key = (p.type ?? "").toLowerCase();
       if (!key) continue;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     }
     return map;
-  }, [products]);
+  }, [productsData]);
 
   const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(categories.length / CATEGORIES_PER_PAGE));
-  }, [categories.length]);
+    if (!categoriesData) return 0;
+
+    return Math.max(1, Math.ceil(categoriesData.data.length / CATEGORIES_PER_PAGE));
+  }, [categoriesData]);
 
   const currentPage = Math.min(pageParam, totalPages);
 
   const pagedCategories = useMemo(() => {
+    if (!categoriesData) return [];
+
     const start = (currentPage - 1) * CATEGORIES_PER_PAGE;
-    return categories.slice(start, start + CATEGORIES_PER_PAGE);
-  }, [categories, currentPage]);
+    return categoriesData.data.slice(start, start + CATEGORIES_PER_PAGE);
+  }, [categoriesData, currentPage]);
 
   useEffect(() => {
     // If URL contains out-of-range page, clamp it.
@@ -110,6 +95,21 @@ function ProductsPageInner() {
     else params.set("page", String(clamped));
     router.push(`/products?${params.toString()}`);
   };
+
+  if (categoriesError) {
+    return (
+      <ErrorSection
+        message={handleError(categoriesError, "Something went wrong while fetching categories.")}
+      />
+    );
+  }
+  if (productsError) {
+    return (
+      <ErrorSection
+        message={handleError(productsError, "Something went wrong while fetching products.")}
+      />
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50/50 flex flex-col pt-0">
@@ -139,24 +139,18 @@ function ProductsPageInner() {
         <div className="w-full bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
           {/* Categories Container */}
           <div className="p-6">
-            {isLoading && (
+            {isProductsLoading || isCategoriesLoading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="size-7 animate-spin text-[#6cc200]" />
                 <span className="ml-3 text-gray-500 text-sm">Loading store…</span>
               </div>
-            )}
-
-            {!isLoading && error && (
-              <div className="bg-red-50 border border-red-200 rounded-md px-6 py-6 text-sm text-red-600">
-                {error}
-              </div>
-            )}
-
-            {!isLoading && !error && (
+            ) : !productsData || productsData.length < 1 ? (
+              <span className="text-xs text-gray-500 mt-0.5">No available product</span>
+            ) : (
               <div className="space-y-10">
                 {pagedCategories.map((cat) => {
                   const type = (cat.type ?? "").toLowerCase();
-                  const list = productsByType.get(type) ?? [];
+                  const list = productsByType?.get(type) ?? [];
                   const preview = list.slice(0, PREVIEW_PER_CATEGORY);
 
                   return (

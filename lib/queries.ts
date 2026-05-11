@@ -3,6 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { userService } from "./services/user.service";
 import { OrderHistoryStatus } from "@/types/user";
+import { cartService } from "./services/cart.service";
+import { wishlistService } from "./services/wishlist.service";
+import { productService } from "./services/product.service";
+import { categoryService } from "./services/category.service";
 
 // queries keys
 export const queryKeys = {
@@ -11,6 +15,10 @@ export const queryKeys = {
   getAllRepayment: "getAllRepayment",
   getNotifications: "getNotifications",
   getFAQs: "getFAQs",
+  getCart: "getCart",
+  getWishlist: "getWishlist",
+  getProducts: "getProducts",
+  getCategories: "getCategories",
 };
 
 // queries
@@ -80,6 +88,50 @@ export const useGetFAQs = () => {
     queryKey: [queryKeys.getFAQs],
     queryFn: async () => {
       return await userService.getFAQs();
+    },
+  });
+
+  return queryResult;
+};
+
+export const useGetCartItems = () => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.getCart],
+    queryFn: async () => {
+      return await cartService.getCartItems();
+    },
+  });
+
+  return queryResult;
+};
+
+export const useGetWishlistItems = () => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.getWishlist],
+    queryFn: async () => {
+      return await wishlistService.getWishlistItems();
+    },
+  });
+
+  return queryResult;
+};
+
+export const useGetCategories = () => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.getCategories],
+    queryFn: async () => {
+      return await categoryService.getCategories();
+    },
+  });
+
+  return queryResult;
+};
+
+export const useGetProducts = () => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.getProducts],
+    queryFn: async () => {
+      return await productService.getProducts();
     },
   });
 

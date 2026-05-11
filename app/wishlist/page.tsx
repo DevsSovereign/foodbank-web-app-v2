@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Home, Loader2 } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
@@ -18,36 +18,23 @@ import ErrorSection from "@/components/ui/ErrorSection";
 import { handleError } from "@/lib/handle-error";
 import { ApiError } from "@/types/api";
 import { useToast } from "@/components/ui/toast/ToastProvider";
+import { queryKeys, useGetWishlistItems } from "@/lib/queries";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function WishlistPage() {
   const { toast } = useToast();
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cartPendingIds, setCartPendingIds] = useState<Set<string>>(() => new Set());
   const router = useRouter();
+  const {
+    data: wishlistItemsData,
+    error: wishlistItemsError,
+    isLoading: wishlistItemsLoading,
+    refetch: refetchWishlistItems,
+  } = useGetWishlistItems();
   const token = getAuthToken();
-
-  // ----- Fetch wishlist items from the API -----
-  const fetchWishlistItems = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await wishlistService.getWishlistItems();
-      const items = (response.data ?? []).map(toWishlistItem);
-      setWishlistItems(items);
-    } catch (err) {
-      setError(handleError(err, "Something went wrong while fetching your wishlist."));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!token) return;
-
-    fetchWishlistItems();
-  }, [token, fetchWishlistItems]);
+  const queryClient = useQueryClient();
 
   const removeItem = async (id: string) => {
     // Optimistic removal — instantly update the UI
@@ -56,52 +43,59 @@ export default function WishlistPage() {
 
     try {
       await wishlistService.deleteWishlistItem({ itemId: id });
-    } catch {
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
+    } catch (error) {
       // Roll back on failure and notify the user
       setWishlistItems(previousItems);
-      toast({ variant: "error", title: "Failed to remove item. Please try again." });
+      toast({
+        variant: "error",
+        title: handleError(error, "Failed to remove item. Please try again."),
+      });
     }
   };
 
   const addToCart = async (productId: string) => {
-  const token =
-    typeof window !== "undefined" ? sessionStorage.getItem("fb4u_token") : null;
+    if (cartPendingIds.has(productId)) return;
 
-  if (!token) {
-    window.location.href = "/login";
-    return;
+    setCartPendingIds((prev) => new Set(prev).add(productId));
+
+    try {
+      await cartService.addToCart({
+        productId,
+        quantity: 1,
+      });
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getCart] });
+
+      toast({
+        variant: "success",
+        title: "Item added to cart.",
+      });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Failed to add to cart.";
+
+      toast({
+        variant: "error",
+        title: message,
+      });
+    } finally {
+      setCartPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(productId);
+        return next;
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!wishlistItemsData) return;
+
+    const items = (wishlistItemsData.data ?? []).map(toWishlistItem);
+    setWishlistItems(items);
+  }, [wishlistItemsData]);
+
+  if (wishlistItemsError) {
+    setError(handleError(wishlistItemsError, "Something went wrong while fetching your wishlist."));
   }
-
-  if (cartPendingIds.has(productId)) return;
-
-  setCartPendingIds((prev) => new Set(prev).add(productId));
-
-  try {
-    await cartService.addToCart({
-      productId,
-      quantity: 1,
-    });
-
-    toast({
-      variant: "success",
-      title: "Item added to cart.",
-    });
-  } catch (err) {
-    const message =
-      err instanceof ApiError ? err.message : "Failed to add to cart.";
-
-    toast({
-      variant: "error",
-      title: message,
-    });
-  } finally {
-    setCartPendingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(productId);
-      return next;
-    });
-  }
-};
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -218,13 +212,13 @@ export default function WishlistPage() {
             </button>
           </div>
         </section>
-      ) : isLoading ? (
+      ) : wishlistItemsLoading ? (
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-24 flex flex-col items-center justify-center text-center">
           <Loader2 className="size-10 text-[#8cc629] animate-spin mb-4" />
           <p className="text-gray-500 text-sm">Loading your wishlist…</p>
         </main>
       ) : error ? (
-        <ErrorSection message={error} onRetry={fetchWishlistItems} />
+        <ErrorSection message={error} onRetry={refetchWishlistItems} />
       ) : (
         <main className="flex-1 w-full max-w-300 mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] rounded-sm min-h-125">

@@ -10,13 +10,17 @@ import Footer from "@/components/layout/Footer";
 import TopRibbon from "@/components/layout/TopRibbon";
 import NavBar from "@/components/home/NavBar";
 import AddToCartModal from "@/components/ui/AddToCartModal";
-import { productService } from "@/lib/services/product.service";
 import type { ProductDto } from "@/types/product";
 import { wishlistService } from "@/lib/services/wishlist.service";
 import { ApiError } from "@/types/api";
 import { cartService } from "@/lib/services/cart.service";
 import { useToast } from "@/components/ui/toast/ToastProvider";
-import { getAuthToken } from "@/lib/auth-utils";
+import { queryKeys, useGetCartItems, useGetProducts, useGetWishlistItems } from "@/lib/queries";
+import { handleError } from "@/lib/handle-error";
+import useCheckIfExist from "@/hooks/useCheckIfExist";
+import { CartItemDto } from "@/types/cart";
+import { WishlistItemDto } from "@/types/wishlist";
+import { useQueryClient } from "@tanstack/react-query";
 
 /** Fallback image when the product has no image. */
 const PLACEHOLDER_IMAGE = "/assets/home/product-yellow-garri.png";
@@ -37,129 +41,83 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
 
   const [product, setProduct] = useState<ProductDto | null>(null);
   const [similarProducts, setSimilarProducts] = useState<ProductDto[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
   const [isAddedModalOpen, setIsAddedModalOpen] = useState(false);
   const [cartPending, setCartPending] = useState(false);
   const [wishlistPending, setWishlistPending] = useState(false);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [wishlistItemId, setWishlistItemId] = useState<string | null>(null);
+  const [productItemId, setProductItemId] = useState<string>("");
 
-  useEffect(() => {
-    let cancelled = false;
-    const token = typeof window !== "undefined" ? sessionStorage.getItem("fb4u_token") : null;
-    if (!token) return;
+  const {
+    data: productsData,
+    error: productsError,
+    isLoading: isProductsLoading,
+  } = useGetProducts();
+  const queryClient = useQueryClient();
 
-    async function fetchWishlistForProduct() {
-      try {
-        const response = await wishlistService.getWishlistItems();
-        if (cancelled) return;
-        const match = (response.data ?? []).find((w) => w.productId === id) ?? null;
-        setWishlistItemId(match?.id ?? null);
-        setIsWishlisted(!!match);
-      } catch {
-        // ignore
-      }
-    }
+  const { data: cartItemsResponse } = useGetCartItems();
+  const { data: wishlistItemsData, refetch: refetchWishList } = useGetWishlistItems();
 
-    fetchWishlistForProduct();
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
+  const { itemIds: cartPendingIds, setItemIds: setCartPendingIds } = useCheckIfExist({
+    itemList: cartItemsResponse ? cartItemsResponse?.data : ([] as CartItemDto[]),
+  });
 
-  useEffect(() => {
-    let cancelled = false;
+  const { itemIds: wishListIds, setItemIds: setWishListIds } = useCheckIfExist({
+    itemList: wishlistItemsData ? wishlistItemsData?.data : ([] as WishlistItemDto[]),
+  });
 
-    async function fetchProduct() {
-      try {
-        setIsLoading(true);
-        setError(null);
+  const isWishListed = wishListIds.has(id);
+  const isInCart = cartPendingIds.has(id);
 
-        // Fetch all products to get the target product and similar products
-        const allProducts = await productService.getProducts();
-        const found = allProducts.find((p) => p._id === id) ?? null;
+  const productImage = product ? product.image || PLACEHOLDER_IMAGE : PLACEHOLDER_IMAGE;
 
-        if (!cancelled) {
-          setProduct(found);
-
-          if (found) {
-            // Get similar products: same type, exclude current, max 4
-            const similar = allProducts
-              .filter((p) => p.type === found.type && p._id !== found._id)
-              .slice(0, 4);
-            setSimilarProducts(similar);
-          }
-        }
-      } catch {
-        if (!cancelled) {
-          setError("Failed to load product details. Please try again.");
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-
-    fetchProduct();
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
-
-  const increaseQuantity = () => setQuantity((q) => q + 1);
-  const decreaseQuantity = () => setQuantity((q) => (q > 1 ? q - 1 : 1));
+  const increaseQuantity = () => setQuantity((prevQuantity) => prevQuantity + 1);
+  const decreaseQuantity = () =>
+    setQuantity((prevQuantity) => (prevQuantity > 1 ? prevQuantity - 1 : 1));
 
   const addToWishlist = async () => {
     if (!product) return;
-    const token = typeof window !== "undefined" ? sessionStorage.getItem("fb4u_token") : null;
-    if (!token) {
-      window.location.href = "/login";
-      return;
-    }
-    if (wishlistPending) return;
 
     setWishlistPending(true);
+
     try {
-      if (wishlistItemId) {
-        // optimistic remove
-        setIsWishlisted(false);
-        const toDelete = wishlistItemId;
-        setWishlistItemId(null);
-        await wishlistService.deleteWishlistItem({ itemId: toDelete });
+      if (isWishListed) {
+        await wishlistService.deleteWishlistItem({ itemId: productItemId });
+        await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
+        wishListIds.delete(id);
         toast({ title: "Removed from wishlist", variant: "info" });
       } else {
-        // optimistic add
-        setIsWishlisted(true);
         await wishlistService.addToWishlist({ productId: product._id, quantity: 1 });
+        await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
         toast({
           title: "Added to wishlist",
           description: "You can view it in your wishlist.",
           variant: "success",
         });
-        const response = await wishlistService.getWishlistItems();
-        const match = (response.data ?? []).find((w) => w.productId === product._id) ?? null;
-        setWishlistItemId(match?.id ?? null);
+
+        const response = await refetchWishList();
+        if (!response.data) return;
+
+        const match = (response.data.data ?? []).find((w) => w.productId === product._id) ?? null;
+        if (!match) return;
+
+        setWishListIds((prev) => new Set(prev).add(match.id as string));
       }
-    } catch (err) {
+    } catch {
       // Roll back by refetching wishlist state for this product
       try {
-        const response = await wishlistService.getWishlistItems();
-        const match = (response.data ?? []).find((w) => w.productId === product._id) ?? null;
-        setWishlistItemId(match?.id ?? null);
-        setIsWishlisted(!!match);
-      } catch {
-        // ignore
+        const response = await refetchWishList();
+        if (!response.data) return;
+
+        const match = (response.data.data ?? []).find((w) => w.productId === product._id) ?? null;
+        if (!match) return;
+
+        setWishListIds((prev) => new Set(prev).add(match.id as string));
+      } catch (error) {
+        console.log(error);
+        toast({ variant: "error", title: handleError(error) });
       }
-      const message = err instanceof ApiError ? err.message : "Failed to add to wishlist.";
-      toast({
-        title: "Wishlist update failed",
-        description: message,
-        variant: "error",
-        durationMs: 3400,
-      });
     } finally {
       setWishlistPending(false);
     }
@@ -168,16 +126,12 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
   const addToCart = async () => {
     if (!product || !product.isAvailable) return;
 
-    const token = getAuthToken();
-    if (!token) {
-      window.location.href = "/login";
-      return;
-    }
-    if (cartPending) return;
     setCartPending(true);
 
     try {
       await cartService.addToCart({ productId: product._id, quantity });
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getCart] });
+      setCartPendingIds((prev) => new Set(prev).add(id));
       setIsAddedModalOpen(true);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to add to cart.";
@@ -187,8 +141,33 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
     }
   };
 
+  useEffect(() => {
+    if (!wishlistItemsData) return;
+
+    const match = (wishlistItemsData.data ?? []).find((w) => w.productId === id) ?? null;
+    if (!match) return;
+
+    setProductItemId(match._id as string);
+    setWishListIds((prev) => new Set(prev).add(match.id as string));
+  }, [id, setWishListIds, wishlistItemsData]);
+
+  useEffect(() => {
+    if (!productsData) return;
+
+    const found = productsData.find((p) => p._id === id) ?? null;
+    if (!found) return;
+
+    // Get similar products: same type, exclude current, max 4
+    const similarProducts = productsData
+      .filter((p) => p.type === found.type && p._id !== found._id)
+      .slice(0, 4);
+
+    setProduct(found);
+    setSimilarProducts(similarProducts);
+  }, [id, productsData]);
+
   // ── Loading State ────────────────────────────────────────────────
-  if (isLoading) {
+  if (isProductsLoading) {
     return (
       <main className="min-h-screen bg-white flex flex-col font-sans overflow-x-hidden">
         <TopRibbon />
@@ -204,14 +183,16 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
   }
 
   // ── Error State ──────────────────────────────────────────────────
-  if (error || !product) {
+  if (productsError || !product) {
     return (
       <main className="min-h-screen bg-white flex flex-col font-sans overflow-x-hidden">
         <TopRibbon />
         <Header />
         <NavBar />
         <div className="flex-1 flex flex-col items-center justify-center py-32 gap-4">
-          <p className="text-red-500 text-sm">{error ?? "Product not found."}</p>
+          <p className="text-red-500 text-sm">
+            {handleError(productsError) ?? "Product not found."}
+          </p>
           <Link href="/" className="text-sm font-medium text-[#6cc200] hover:underline">
             ← Back to Home
           </Link>
@@ -220,9 +201,6 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
       </main>
     );
   }
-
-  // ── Product Found ────────────────────────────────────────────────
-  const productImage = product.image ?? PLACEHOLDER_IMAGE;
 
   return (
     <main className="min-h-screen bg-white flex flex-col font-sans overflow-x-hidden">
@@ -336,15 +314,21 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
               </div>
 
               <button
-                className={`flex-1 sm:flex-none sm:w-55 h-11.5 flex items-center justify-center gap-2 rounded-md font-bold text-sm shadow-md transition-colors active:scale-[0.98] disabled:opacity-60 ${
+                className={`flex-1 disabled:opacity-50 disabled:cursor-not-allowed sm:flex-none sm:w-55 h-11.5 flex items-center justify-center gap-2 rounded-md font-bold text-sm shadow-md transition-colors active:scale-[0.98] ${
                   product.isAvailable
                     ? "bg-[#f57422] hover:bg-[#e06518] text-white cursor-pointer"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
                 onClick={addToCart}
-                disabled={!product.isAvailable || cartPending}
+                disabled={!product.isAvailable || cartPending || isInCart}
               >
-                {product.isAvailable ? (cartPending ? "Adding..." : "ADD TO CART") : "OUT OF STOCK"}
+                {product.isAvailable
+                  ? cartPending
+                    ? "Adding..."
+                    : isInCart
+                      ? "ALREADY IN CART"
+                      : "ADD TO CART"
+                  : "OUT OF STOCK"}
                 <ShoppingCart className="size-4" />
               </button>
             </div>
@@ -356,9 +340,10 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-500 group transition-colors w-max disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <Heart
-                className={`size-4 transition-colors ${isWishlisted ? "text-red-500" : "text-gray-400 group-hover:text-red-500"}`}
+                fill={isWishListed ? "#fb2c36" : ""}
+                className={`size-4 transition-colors ${isWishListed ? "text-red-500" : "text-gray-400 group-hover:text-red-500"}`}
               />
-              <span className="font-medium">Add to Wishlist</span>
+              <span className="font-medium">{`${isWishListed ? "Remove" : "Add"} to Wishlist`}</span>
             </button>
           </div>
         </div>

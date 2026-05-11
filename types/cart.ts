@@ -6,6 +6,8 @@ import type { ApiResponse } from "./api";
 
 /** Individual cart item as returned by the backend. */
 export interface CartItemDto {
+  [key: string]: unknown;
+
   /** Unique cart-item (line) ID (some envs use `_id`). */
   id?: string;
   _id?: string;

@@ -380,6 +380,7 @@ export default function CartPage() {
                           <td className="px-6 py-6">
                             <div className="flex items-center gap-4">
                               <button
+                                title={`Remove ${item.name}`}
                                 onClick={() => removeItem(item.id)}
                                 className="text-gray-300 hover:text-red-500 transition-colors"
                               >
@@ -464,7 +465,7 @@ export default function CartPage() {
                 </div>
                 <div className="px-6 py-4 bg-white flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-100">
                   <button
-                    onClick={() => router.back()}
+                    onClick={() => router.push("products?page=0")}
                     className="text-[13px] font-bold text-[#8cc629] border border-[#8cc629] px-6 py-2.5 rounded-md hover:bg-[#f4faee] transition-colors w-full sm:w-auto uppercase tracking-wide"
                   >
                     Return to store

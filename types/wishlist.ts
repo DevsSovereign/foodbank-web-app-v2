@@ -6,6 +6,8 @@ import type { ApiResponse } from "./api";
 
 /** Individual wishlist item as returned by the backend. */
 export interface WishlistItemDto {
+  [key: string]: unknown;
+
   /** Unique wishlist-item ID (some envs use `_id`). */
   id?: string;
   _id?: string;

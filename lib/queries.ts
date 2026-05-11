@@ -7,6 +7,7 @@ import { cartService } from "./services/cart.service";
 import { wishlistService } from "./services/wishlist.service";
 import { productService } from "./services/product.service";
 import { categoryService } from "./services/category.service";
+import { getAuthToken } from "./auth-utils";
 
 // queries keys
 export const queryKeys = {
@@ -95,22 +96,28 @@ export const useGetFAQs = () => {
 };
 
 export const useGetCartItems = () => {
+  const token = getAuthToken();
+
   const queryResult = useQuery({
     queryKey: [queryKeys.getCart],
     queryFn: async () => {
       return await cartService.getCartItems();
     },
+    enabled: !!token,
   });
 
   return queryResult;
 };
 
 export const useGetWishlistItems = () => {
+  const token = getAuthToken();
+
   const queryResult = useQuery({
     queryKey: [queryKeys.getWishlist],
     queryFn: async () => {
       return await wishlistService.getWishlistItems();
     },
+    enabled: !!token,
   });
 
   return queryResult;

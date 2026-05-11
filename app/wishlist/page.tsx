@@ -18,23 +18,29 @@ import ErrorSection from "@/components/ui/ErrorSection";
 import { handleError } from "@/lib/handle-error";
 import { ApiError } from "@/types/api";
 import { useToast } from "@/components/ui/toast/ToastProvider";
-import { queryKeys, useGetWishlistItems } from "@/lib/queries";
+import { queryKeys, useGetCartItems, useGetWishlistItems } from "@/lib/queries";
 import { useQueryClient } from "@tanstack/react-query";
+import useCheckIfExist from "@/hooks/useCheckIfExist";
+import { CartItemDto } from "@/types/cart";
 
 export default function WishlistPage() {
   const { toast } = useToast();
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [cartPendingIds, setCartPendingIds] = useState<Set<string>>(() => new Set());
   const router = useRouter();
+  const queryClient = useQueryClient();
   const {
     data: wishlistItemsData,
     error: wishlistItemsError,
     isLoading: wishlistItemsLoading,
     refetch: refetchWishlistItems,
   } = useGetWishlistItems();
+  const { data: cartItemsResponse } = useGetCartItems();
+
+  const { itemIds: cartPendingIds, setItemIds: setCartPendingIds } = useCheckIfExist({
+    itemList: cartItemsResponse ? cartItemsResponse?.data : ([] as CartItemDto[]),
+  });
   const token = getAuthToken();
-  const queryClient = useQueryClient();
 
   const removeItem = async (id: string) => {
     // Optimistic removal — instantly update the UI
@@ -287,11 +293,11 @@ export default function WishlistPage() {
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-4">
                           <button
-                            className={`text-white text-[11px] font-bold px-5 py-2.5 rounded-sm uppercase flex items-center justify-center gap-2 transition-colors min-w-35 ${item.inStock ? "bg-[#8cc629] hover:bg-[#7db424]" : "bg-[#aeb8c6] cursor-not-allowed text-white"}`}
+                            className={`text-white disabled:opacity-50 text-[11px] font-bold px-5 py-2.5 rounded-sm uppercase flex items-center justify-center gap-2 transition-colors min-w-35 ${item.inStock ? "bg-[#8cc629] hover:bg-[#7db424]" : "bg-[#aeb8c6] cursor-not-allowed text-white"}`}
                             onClick={() => addToCart(item.productId)}
                             disabled={!item.inStock || cartPendingIds.has(item.productId)}
                           >
-                            ADD TO CART
+                            {cartPendingIds.has(item.productId) ? "ALREADY IN CART" : "ADD TO CART"}
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="14"

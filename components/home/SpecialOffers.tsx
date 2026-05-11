@@ -9,10 +9,14 @@ import { wishlistService } from "@/lib/services/wishlist.service";
 import { ApiError } from "@/types/api";
 import { cartService } from "@/lib/services/cart.service";
 import { useToast } from "@/components/ui/toast/ToastProvider";
-import { queryKeys, useGetProducts, useGetWishlistItems } from "@/lib/queries";
+import { queryKeys, useGetCartItems, useGetProducts, useGetWishlistItems } from "@/lib/queries";
 import { useQueryClient } from "@tanstack/react-query";
 import { handleError } from "@/lib/handle-error";
 import ErrorSection from "../ui/ErrorSection";
+import { getAuthToken } from "@/lib/auth-utils";
+import { useRouter } from "next/navigation";
+import { CartItemDto } from "@/types/cart";
+import useCheckIfExist from "@/hooks/useCheckIfExist";
 
 /** Format a number as Naira, e.g. 45000 → "₦45,000" */
 function formatPrice(amount: number): string {
@@ -32,7 +36,6 @@ export default function SpecialOffers({
   const [wishlistItemIdByProductId, setWishlistItemIdByProductId] = useState<Map<string, string>>(
     () => new Map(),
   );
-  const [cartPendingIds, setCartPendingIds] = useState<Set<string>>(() => new Set());
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const {
     data: productsData,
@@ -40,15 +43,25 @@ export default function SpecialOffers({
     isLoading: isProductsLoading,
     refetch: refetchProducts,
   } = useGetProducts();
+  const { data: cartItemsResponse } = useGetCartItems();
   const { data: wishlistItemsData, refetch: refetchWishList } = useGetWishlistItems();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const token = getAuthToken();
+  const router = useRouter();
+  const { itemIds: cartPendingIds, setItemIds: setCartPendingIds } = useCheckIfExist({
+    itemList: cartItemsResponse ? cartItemsResponse?.data : ([] as CartItemDto[]),
+  });
 
   // Pick the first product as "featured" and the rest for the grid
   const featured = productsData ? productsData[0] : null;
   const gridProducts = productsData ? productsData.slice(1, 7) : []; // Show 6 in the grid
 
   const addToWishlist = async (productId: string) => {
+    if (!token) {
+      return router.replace("/login");
+    }
+
     if (wishlistIds.has(productId)) {
       return toast({ variant: "info", title: "This product already exist in your wishlist" });
     }
@@ -141,7 +154,9 @@ export default function SpecialOffers({
   };
 
   const addToCart = async (productId: string) => {
-    if (cartPendingIds.has(productId)) return;
+    if (!token) {
+      return router.replace("/login");
+    }
 
     setIsAdding(true);
 
@@ -162,11 +177,13 @@ export default function SpecialOffers({
     onLoadingChange?.(isProductsLoading);
   }, [isProductsLoading, onLoadingChange]);
 
+  // verify if item already exist in wishlist
   useEffect(() => {
     if (!wishlistItemsData) return;
 
     const map = new Map<string, string>();
     const ids = new Set<string>();
+
     for (const item of wishlistItemsData.data ?? []) {
       const productId = item.productId;
       const wishlistItemId = item._id;
@@ -193,7 +210,7 @@ export default function SpecialOffers({
       <div className="flex items-center justify-between mb-8 relative">
         <h2 className="text-xl md:text-2xl font-bold text-gray-800 inline-block relative z-10 pb-2">
           Special Offers
-          <div className="absolute bottom-0 left-0 w-1/2 h-[3px] bg-[#6cc200]" />
+          <div className="absolute bottom-0 left-0 w-1/2 h-0.75 bg-[#6cc200]" />
         </h2>
         <div className="absolute bottom-0 left-0 w-full h-px bg-gray-200" />
         <Link
@@ -209,7 +226,7 @@ export default function SpecialOffers({
       {isProductsLoading ? (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
           <div className="bg-white border border-gray-100 rounded-sm p-4 animate-pulse">
-            <div className="w-full h-[180px] bg-gray-100 rounded-md mb-4" />
+            <div className="w-full h-45 bg-gray-100 rounded-md mb-4" />
             <div className="h-4 bg-gray-100 rounded w-2/3 mb-2" />
             <div className="h-4 bg-gray-100 rounded w-1/3 mb-4" />
             <div className="h-3 bg-gray-100 rounded w-full mb-1" />
@@ -227,7 +244,7 @@ export default function SpecialOffers({
                 key={idx}
                 className="bg-white border border-gray-100 rounded-sm p-3 animate-pulse"
               >
-                <div className="w-full h-[140px] bg-gray-100 rounded mb-3" />
+                <div className="w-full h-35 bg-gray-100 rounded mb-3" />
                 <div className="h-3 bg-gray-100 rounded w-3/4 mb-2" />
                 <div className="h-3 bg-gray-100 rounded w-1/2" />
               </div>
@@ -250,12 +267,12 @@ export default function SpecialOffers({
                 </span>
               </div>
 
-              <div className="w-full h-[180px] relative rounded-md overflow-hidden bg-[#cde8b4] mb-4 z-10 flex items-center justify-center p-2">
+              <div className="w-full h-45 relative rounded-md overflow-hidden bg-[#cde8b4] mb-4 z-10 flex items-center justify-center p-2">
                 {featured.image?.startsWith("http") ? (
                   <img
                     src={featured.image}
                     alt={featured.name}
-                    className="size-[160px] object-contain"
+                    className="size-40 object-contain"
                     loading="lazy"
                   />
                 ) : (
@@ -294,7 +311,7 @@ export default function SpecialOffers({
                 </button>
                 <button
                   type="button"
-                  className="flex-1 flex items-center justify-center gap-2 bg-[#6cc200] text-white h-8 rounded-sm text-[10px] font-bold hover:bg-[#5aad00] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="disabled:opacity-50 flex-1 flex items-center justify-center gap-2 bg-[#6cc200] text-white h-8 rounded-sm text-[10px] font-bold hover:bg-[#5aad00] transition cursor-pointer disabled:cursor-not-allowed"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -344,7 +361,7 @@ export default function SpecialOffers({
                   </div>
                 )}
 
-                <div className="relative w-full h-[140px] bg-white mb-2 flex items-center justify-center">
+                <div className="relative w-full h-35 bg-white mb-2 flex items-center justify-center">
                   {product.image?.startsWith("http") ? (
                     <img
                       src={product.image}

@@ -50,7 +50,7 @@ export const cartService = {
    * Body: `{ itemId: string }`
    */
   deleteCartItem(data: DeleteCartItemRequest): Promise<DeleteCartItemResponse> {
-    return apiClient.del<DeleteCartItemResponse>("/v1/api/deleteCartItem", data);
+    return apiClient.del<DeleteCartItemResponse>("/deleteCartItem", data);
   },
 
   /**

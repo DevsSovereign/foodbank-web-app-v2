@@ -63,14 +63,14 @@ export default function WishlistPage() {
   const addToCart = async (productId: string) => {
     if (cartPendingIds.has(productId)) return;
 
-    setCartPendingIds((prev) => new Set(prev).add(productId));
-
+    
     try {
       await cartService.addToCart({
         productId,
         quantity: 1,
       });
       await queryClient.invalidateQueries({ queryKey: [queryKeys.getCart] });
+      setCartPendingIds((prev) => new Set(prev).add(productId));
 
       toast({
         variant: "success",

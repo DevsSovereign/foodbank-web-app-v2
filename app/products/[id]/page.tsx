@@ -21,6 +21,8 @@ import useCheckIfExist from "@/hooks/useCheckIfExist";
 import { CartItemDto } from "@/types/cart";
 import { WishlistItemDto } from "@/types/wishlist";
 import { useQueryClient } from "@tanstack/react-query";
+import Router from "next/router";
+import { useRouter } from "next/navigation";
 
 /** Fallback image when the product has no image. */
 const PLACEHOLDER_IMAGE = "/assets/home/product-yellow-garri.png";
@@ -38,7 +40,7 @@ function capitalize(str: string): string {
 export default function ProductDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { toast } = useToast();
-
+  const router = useRouter();
   const [product, setProduct] = useState<ProductDto | null>(null);
   const [similarProducts, setSimilarProducts] = useState<ProductDto[]>([]);
 
@@ -404,14 +406,13 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
               {similarProducts.map((item) => (
-                <Link
-                  href={`/products/${item._id}`}
+                <div
                   key={item._id}
                   className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col cursor-pointer"
                 >
-                  <button className="absolute top-3 right-3 z-10 p-1.5 bg-white rounded-full shadow-sm hover:bg-gray-50 text-gray-300 hover:text-red-500 active:scale-95 transition-all">
+                  {/* <button className="absolute top-3 right-3 z-10 p-1.5 bg-white rounded-full shadow-sm hover:bg-gray-50 text-gray-300 hover:text-red-500 active:scale-95 transition-all">
                     <Heart className="size-4" />
-                  </button>
+                  </button> */}
 
                   <div className="relative w-full aspect-square mb-4 flex items-center justify-center p-2">
                     <Image
@@ -422,19 +423,30 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
                     />
                   </div>
 
-                  <div className="mt-auto">
-                    <h3 className="text-[13px] font-bold text-gray-800 mb-1 line-clamp-2">
-                      {item.name}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#8ced00] font-bold text-sm tracking-tight">
-                        {formatPrice(item.price)}
-                      </span>
-                      <div className="w-px h-3 bg-gray-300" />
-                      <span className="text-xs text-gray-400 font-medium">{item.measurement}</span>
+                  <div className="flex flex-row items-center justify-between w-full">
+                    <div className="mt-auto">
+                      <h3 className="text-[13px] font-bold text-gray-800 mb-1 line-clamp-2">
+                        {item.name}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[#8ced00] font-bold text-sm tracking-tight">
+                          {formatPrice(item.price)}
+                        </span>
+                        <div className="w-px h-3 bg-gray-300" />
+                        <span className="text-xs text-gray-400 font-medium">
+                          {item.measurement}
+                        </span>
+                      </div>
                     </div>
+
+                    <button
+                      onClick={() => router.push(`/products/${item._id}`)}
+                      className="text-white bg-[#8ced00] cursor-pointer p-2 text-sm rounded-sm shadow-sm"
+                    >
+                      View
+                    </button>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           </div>

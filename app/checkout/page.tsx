@@ -10,17 +10,21 @@ import EditCustomerModal from "../../components/checkout/EditCustomerModal";
 import AddPhoneNumberModal from "../../components/checkout/AddPhoneNumberModal";
 import DatePickerModal from "../../components/checkout/DatePickerModal";
 import CheckoutTotal from "@/components/ui/CheckoutTotal";
+import { useUserStore } from "@/store/useUserStore";
 
 const FALLBACK_ADDRESS = "";
 
 export default function CheckoutPage() {
+  const { user } = useUserStore();
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
   const [purchaseOutright, setPurchaseOutright] = useState<boolean>(false);
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
   const [isAddPhoneModalOpen, setIsAddPhoneModalOpen] = useState<boolean>(false);
   const [customerPhone, setCustomerPhone] = useState<string>("");
-  const [customerAddress, setCustomerAddress] = useState("Detecting your location…");
+  const [customerAddress, setCustomerAddress] = useState<string>(
+    "Detecting your current location…",
+  );
   const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
   const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<Date | null>(null);
 
@@ -305,7 +309,7 @@ export default function CheckoutPage() {
             <div className="space-y-4 mb-6">
               <div className="flex items-center gap-3">
                 <User className="text-[#8cc629] w-4.5 h-4.5" />
-                <span className="text-gray-700 text-sm">Peter Hassan</span>
+                <span className="text-gray-700 text-sm">{`${user?.firstName} ${user?.lastName}`}</span>
               </div>
               <div className="flex items-start gap-3">
                 <MapPin className="text-[#8cc629] w-4.5 h-4.5 mt-0.5" />

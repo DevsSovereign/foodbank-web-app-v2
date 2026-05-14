@@ -470,9 +470,6 @@ export default function CartPage() {
                   >
                     Return to store
                   </button>
-                  <button className="text-[13px] font-bold text-[#8cc629] border border-[#8cc629] px-6 py-2.5 rounded-md hover:bg-[#f4faee] transition-colors w-full sm:w-auto uppercase tracking-wide">
-                    Update Cart
-                  </button>
                 </div>
               </div>
             </div>
@@ -523,11 +520,11 @@ export default function CartPage() {
                   </div>
 
                   <button
-                    onClick={() =>
+                    onClick={() => {
                       router.push(
                         `/checkout?sub=${subtotal}&del=${deliveryCharge}&svc=${serviceCharge}`,
-                      )
-                    }
+                      );
+                    }}
                     disabled={!isInstructionAgreed}
                     className="w-full bg-[#8cc629] disabled:opacity-60 text-white py-4 rounded-md font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#7db424] transition-colors mt-4 tracking-wide uppercase"
                   >

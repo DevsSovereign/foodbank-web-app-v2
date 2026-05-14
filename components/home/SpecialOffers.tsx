@@ -6,7 +6,6 @@ import Image from "next/image";
 import { Heart, ShoppingCart, ArrowRight, Eye } from "lucide-react";
 import Link from "next/link";
 import { wishlistService } from "@/lib/services/wishlist.service";
-import { ApiError } from "@/types/api";
 import { cartService } from "@/lib/services/cart.service";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import { queryKeys, useGetCartItems, useGetProducts, useGetWishlistItems } from "@/lib/queries";
@@ -17,6 +16,7 @@ import { getAuthToken } from "@/lib/auth-utils";
 import { useRouter } from "next/navigation";
 import { CartItemDto } from "@/types/cart";
 import useCheckIfExist from "@/hooks/useCheckIfExist";
+import { WishlistItemDto } from "@/types/wishlist";
 
 /** Format a number as Naira, e.g. 45000 → "₦45,000" */
 function formatPrice(amount: number): string {
@@ -31,11 +31,6 @@ export default function SpecialOffers({
 }: {
   onLoadingChange?: (isLoading: boolean) => void;
 }) {
-  const [wishlistIds, setWishlistIds] = useState<Set<string>>(() => new Set());
-  const [wishlistPendingIds, setWishlistPendingIds] = useState<Set<string>>(() => new Set());
-  const [wishlistItemIdByProductId, setWishlistItemIdByProductId] = useState<Map<string, string>>(
-    () => new Map(),
-  );
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const {
     data: productsData,
@@ -52,6 +47,9 @@ export default function SpecialOffers({
   const { itemIds: cartPendingIds, setItemIds: setCartPendingIds } = useCheckIfExist({
     itemList: cartItemsResponse ? cartItemsResponse?.data : ([] as CartItemDto[]),
   });
+  const { itemIds: wishlistIds, setItemIds: setWishlistIds } = useCheckIfExist({
+    itemList: wishlistItemsData ? wishlistItemsData?.data : ([] as WishlistItemDto[]),
+  });
 
   // Pick the first product as "featured" and the rest for the grid
   const featured = productsData ? productsData[0] : null;
@@ -62,94 +60,53 @@ export default function SpecialOffers({
       return router.replace("/login");
     }
 
-    if (wishlistIds.has(productId)) {
-      return toast({ variant: "info", title: "This product already exist in your wishlist" });
-    }
-
-    setWishlistIds((prev) => new Set(prev).add(productId));
-
     try {
-      const existingItemId = wishlistItemIdByProductId.get(productId);
-      if (existingItemId) {
-        // Optimistic remove
-        setWishlistIds((prev) => {
-          const next = new Set(prev);
-          next.delete(productId);
-          return next;
-        });
-        setWishlistItemIdByProductId((prev) => {
-          const next = new Map(prev);
-          next.delete(productId);
-          return next;
-        });
-        await wishlistService.deleteWishlistItem({ itemId: existingItemId });
-        await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
-        toast({ title: "Removed from wishlist", variant: "info" });
-      } else {
+      const existingItemId = wishlistIds.has(productId);
+
+      // if it doesnt exist in wishlist
+      if (!existingItemId) {
         // Optimistic add
         setWishlistIds((prev) => new Set(prev).add(productId));
         await wishlistService.addToWishlist({ productId, quantity: 1 });
-        await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
-        toast({
+        // await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
+
+        const response = await refetchWishList();
+        if (!response.data) return;
+
+        const ids = new Set<string>();
+        for (const item of response.data.data ?? []) {
+          const productId = item.productId;
+          if (!productId) return;
+
+          ids.add(productId);
+        }
+
+        setWishlistIds(ids);
+
+        return toast({
           title: "Added to wishlist",
           description: "You can view it in your wishlist.",
           variant: "success",
         });
-
-        const response = await refetchWishList();
-        if (!response.data) return;
-
-        const map = new Map<string, string>();
-        const ids = new Set<string>();
-        for (const item of response.data.data ?? []) {
-          const productId = item.productId;
-          const wishlistItemId = item.id;
-          if (typeof productId !== "string" || typeof wishlistItemId !== "string") continue;
-          map.set(productId, wishlistItemId);
-          ids.add(productId);
-        }
-        setWishlistItemIdByProductId(map);
-        setWishlistIds(ids);
       }
-    } catch (err) {
-      try {
-        const response = await refetchWishList();
-        if (!response.data) return;
 
-        const map = new Map<string, string>();
-        const ids = new Set<string>();
-        for (const item of response.data.data ?? []) {
-          const productId = item.productId;
-          const wishlistItemId = item.id;
-          if (typeof productId !== "string" || typeof wishlistItemId !== "string") continue;
-          map.set(productId, wishlistItemId);
-          ids.add(productId);
-        }
-        setWishlistItemIdByProductId(map);
-        setWishlistIds(ids);
-      } catch (error) {
-        console.log(error);
-        const message = err instanceof ApiError ? err.message : "Failed to update wishlist.";
-        toast({
-          title: "Wishlist update failed",
-          description: message,
-          variant: "error",
-          durationMs: 3400,
-        });
-      }
-      const message = err instanceof ApiError ? err.message : "Failed to update wishlist.";
-      toast({
-        title: "Wishlist update failed",
-        description: message,
-        variant: "error",
-        durationMs: 3400,
-      });
-    } finally {
-      setWishlistPendingIds((prev) => {
+      // if it exists, optimistic remove
+      setWishlistIds((prev) => {
         const next = new Set(prev);
         next.delete(productId);
         return next;
       });
+
+      const wishListId = wishlistItemsData?.data.find((item) => item.productId === productId);
+      if (!wishListId) {
+        return toast({ variant: "error", title: "You don't have this item in your wishlist" });
+      }
+
+      await wishlistService.deleteWishlistItem({ itemId: wishListId._id as string });
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
+      toast({ title: "Removed from wishlist", variant: "success" });
+    } catch (err) {
+      toast({ variant: "error", title: handleError(err) });
     }
   };
 
@@ -160,14 +117,17 @@ export default function SpecialOffers({
 
     setIsAdding(true);
 
-    setCartPendingIds((prev) => new Set(prev).add(productId));
-
     try {
+      setCartPendingIds((prev) => new Set(prev).add(productId));
       await cartService.addToCart({ productId, quantity: 1 });
       await queryClient.invalidateQueries({ queryKey: [queryKeys.getCart] });
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to add to cart.";
-      toast({ variant: "error", title: message });
+      setCartPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(productId);
+        return next;
+      });
+      toast({ variant: "error", title: handleError(err, "Failed to add to cart.") });
     } finally {
       setIsAdding(false);
     }
@@ -176,25 +136,6 @@ export default function SpecialOffers({
   useEffect(() => {
     onLoadingChange?.(isProductsLoading);
   }, [isProductsLoading, onLoadingChange]);
-
-  // verify if item already exist in wishlist
-  useEffect(() => {
-    if (!wishlistItemsData) return;
-
-    const map = new Map<string, string>();
-    const ids = new Set<string>();
-
-    for (const item of wishlistItemsData.data ?? []) {
-      const productId = item.productId;
-      const wishlistItemId = item._id;
-      if (!productId || !wishlistItemId) return;
-
-      map.set(productId, wishlistItemId);
-      ids.add(productId);
-    }
-    setWishlistItemIdByProductId(map);
-    setWishlistIds(ids);
-  }, [wishlistItemsData]);
 
   if (productsError) {
     return (
@@ -301,7 +242,6 @@ export default function SpecialOffers({
                     e.stopPropagation();
                     addToWishlist(featured._id);
                   }}
-                  disabled={wishlistPendingIds.has(featured._id)}
                   aria-label="Add to wishlist"
                 >
                   <Heart

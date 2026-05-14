@@ -26,7 +26,7 @@ const AddPhoneNumberModal: React.FC<AddPhoneNumberModalProps> = ({ isOpen, onClo
       ></div>
 
       {/* Modal Content */}
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-[400px] overflow-hidden">
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-100 overflow-hidden">
         <div className="p-8">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
@@ -50,19 +50,26 @@ const AddPhoneNumberModal: React.FC<AddPhoneNumberModalProps> = ({ isOpen, onClo
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="relative flex items-center">
-              <div className="absolute left-0 pl-4 flex items-center pointer-events-none">
-                <span className="text-gray-800 font-medium text-[14px]">+234</span>
-                <div className="h-5 w-[1px] bg-gray-300 ml-3"></div>
+            <div className="flex flex-col gap-2 w-full">
+              <div className="relative flex items-center">
+                <div className="absolute left-0 pl-4 flex items-center pointer-events-none">
+                  <span className="text-gray-800 font-medium text-[14px]">+234</span>
+                  <div className="h-5 w-px bg-gray-300 ml-3"></div>
+                </div>
+                <input
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={phoneNumber}
+                  maxLength={10}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="w-full pl-17.5 pr-4 py-3.5 border border-gray-200 rounded-md text-[14px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#8cc629] focus:ring-1 focus:ring-[#8cc629] transition-all"
+                  required
+                />
               </div>
-              <input
-                type="tel"
-                placeholder="Phone Number"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full pl-[70px] pr-4 py-3.5 border border-gray-200 rounded-md text-[14px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#8cc629] focus:ring-1 focus:ring-[#8cc629] transition-all"
-                required
-              />
+
+              <div className="bg-[#fff5f5] text-[#ff8080] p-1 rounded-md text-sm font-medium w-full">
+                Enter your number without the first zero
+              </div>
             </div>
 
             {/* Submit Button */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Heart, User, ShoppingCart, Search, ClipboardList } from "lucide-react";
+import { Heart, User, ShoppingCart, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -103,11 +103,11 @@ export default function Header() {
             </span>
           </Link>
 
-          <div className="w-px h-5 bg-gray-200" />
+          {/* <div className="w-px h-5 bg-gray-200" />
 
           <button className="hover:text-[#6cc200] transition">
             <ClipboardList className="size-5 text-[#6cc200]" />
-          </button>
+          </button> */}
         </div>
       </div>
     </header>

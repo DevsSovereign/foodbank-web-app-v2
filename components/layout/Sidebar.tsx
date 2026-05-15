@@ -68,6 +68,7 @@ export default function Sidebar() {
       )}
 
       <aside
+        onClick={closeMobileSidebar}
         className={`
         fixed md:relative md:self-start inset-y-0 left-0 z-50 md:z-10
         w-70 md:w-72 

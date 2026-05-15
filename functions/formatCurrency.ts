@@ -6,8 +6,9 @@
  * formatCurrency(0)        // "₦0.00"
  * formatCurrency(null)     // "₦0.00"
  */
-export function formatCurrency(value: number | null | undefined): string {
+export function formatCurrency(value: number): string {
   const amount = value ?? 0;
+
   return `₦${new Intl.NumberFormat("en-NG", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

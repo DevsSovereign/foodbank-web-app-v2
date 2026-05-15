@@ -1,19 +1,22 @@
 "use client";
 
-import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ToastProvider from "@/components/ui/toast/ToastProvider";
 import useScrollToTop from "@/hooks/useScrollToTop";
+import { ReactNode } from "react";
+import CustomerDataProvider from "./CustomerData";
 
-export default function ClientProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+const queryClient = new QueryClient();
 
+export default function ClientProvider({ children }: { children: ReactNode }) {
   // always scroll to top on route change
   useScrollToTop();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        <CustomerDataProvider>{children}</CustomerDataProvider>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

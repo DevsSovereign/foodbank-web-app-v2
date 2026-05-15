@@ -3,20 +3,27 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Share2, Gift, ArrowRight } from "lucide-react";
+import { Share2, Gift, ArrowRight, Check } from "lucide-react";
 import { useUserStore } from "@/store/useUserStore";
 import { formatCurrency } from "@/functions/formatCurrency";
+import EmptyState from "@/components/ui/EmptyState";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 
 export default function VerifiedDashboardPage() {
   const [activeTab, setActiveTab] = useState("Wallet");
   const { user } = useUserStore();
+  const { copy, copied } = useCopyToClipboard();
 
-  const transactions = Array(6).fill({
+  const transactions = Array(1).fill({
     event: "Wallet Funded",
     time: "02:37:33 AM",
     date: "12/12/2025",
     amount: "+ ₦ 2,000",
   });
+
+  if (!user) {
+    return <EmptyState />;
+  }
 
   return (
     <div className="w-full max-w-5xl">
@@ -26,7 +33,10 @@ export default function VerifiedDashboardPage() {
 
           <div className="relative z-10">
             <div className="flex bg-white/20 rounded-lg p-1 mb-8 w-fit">
-              {["Wallet", "Credit Limit", "Loans"].map((tab) => (
+              {[
+                "Wallet",
+                // "Credit Limit", "Loans"
+              ].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -47,7 +57,9 @@ export default function VerifiedDashboardPage() {
                   {activeTab === "Loans" ? "Total amount owed today" : "Wallet Balance"}
                 </p>
                 <div className="flex items-center gap-2 mb-8">
-                  <h2 className="text-4xl font-bold tracking-tight">₦ 40,000</h2>
+                  <h2 className="text-4xl font-bold tracking-tight">
+                    {formatCurrency(user.virtualAccount.walletbalance)}
+                  </h2>
                   {activeTab === "Loans" && (
                     <div className="size-5 rounded-full bg-[#8cc629] flex items-center justify-center text-[10px] font-bold border border-white/30">
                       1/2
@@ -86,18 +98,24 @@ export default function VerifiedDashboardPage() {
           <div className="relative z-10">
             <p className="text-sm font-medium opacity-90 mb-1">Referral Earnings</p>
             <h2 className="text-4xl font-bold tracking-tight mb-8">
-              {formatCurrency(user?.referralBonusBalance ?? 0)}
+              {formatCurrency(user.referralBonusBalance)}
             </h2>
           </div>
 
           <div className="relative z-10 bg-white/10 rounded-xl p-4 border border-white/20">
             <div className="flex items-center gap-2 mb-4">
               <Gift size={18} className="opacity-80" />
-              <span className="text-sm font-medium">{user?.referredCustomers.length ?? 0} Total Referred</span>
+              <span className="text-sm font-medium">
+                {user.referredCustomers.length} Total Referred
+              </span>
             </div>
-            <button className="w-full bg-white hover:bg-gray-50 text-[#5a8bb3] px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
+            <button
+              onClick={() => copy(user.referralLink)}
+              className="w-full bg-white hover:bg-gray-50 text-[#5a8bb3] px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm flex flex-row items-center justify-center gap-2"
+            >
               <Share2 size={16} />
               Invite Friends
+              {copied && <Check className="size-3" />}
             </button>
           </div>
         </div>

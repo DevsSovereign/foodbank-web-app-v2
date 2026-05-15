@@ -7,18 +7,9 @@ import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 
 export default function PaymentPage() {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
-
-  const [timeLeft, setTimeLeft] = useState(23 * 3600 + 56 * 60 + 17);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeLeft((prevTime) => (prevTime > 0 ? prevTime - 1 : 0));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
+  const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [timeLeft, setTimeLeft] = useState<number>(23 * 3600 + 56 * 60 + 17);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -33,6 +24,16 @@ export default function PaymentPage() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeLeft((prevTime) => (prevTime > 0 ? prevTime - 1 : 0));
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <TopRibbon />
@@ -40,7 +41,7 @@ export default function PaymentPage() {
 
       <nav className="bg-white border-b border-gray-100 py-3 relative z-10 w-full mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div className="text-sm font-medium flex items-center gap-2 flex-shrink-0">
+          <div className="text-sm font-medium flex items-center gap-2 shrink-0">
             <Link
               href="/"
               className="flex items-center gap-2 text-gray-500 hover:text-[#6cc200] transition"
@@ -181,7 +182,7 @@ export default function PaymentPage() {
         </div>
 
         {/* Details Card */}
-        <div className="w-full max-w-[650px] bg-white border border-gray-100 shadow-sm p-8 rounded-sm mb-6">
+        <div className="w-full max-w-162.5 bg-white border border-gray-100 shadow-sm p-8 rounded-sm mb-6">
           <div className="space-y-6">
             {/* Account Name */}
             <div className="flex justify-between items-center pb-6 border-b border-gray-100">
@@ -242,7 +243,7 @@ export default function PaymentPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="w-full max-w-[650px] flex flex-col sm:flex-row gap-4">
+        <div className="w-full max-w-162.5 flex flex-col sm:flex-row gap-4">
           <Link
             href="/checkout/success"
             className="flex-1 flex justify-center items-center bg-[#8cc629] hover:bg-[#7db424] text-white py-4 font-bold text-[12px] uppercase tracking-wider transition-colors"

@@ -11,6 +11,7 @@ import AddPhoneNumberModal from "../../components/checkout/AddPhoneNumberModal";
 import DatePickerModal from "../../components/checkout/DatePickerModal";
 import CheckoutTotal from "@/components/ui/CheckoutTotal";
 import { useUserStore } from "@/store/useUserStore";
+import { formatCurrency } from "@/functions/formatCurrency";
 
 const FALLBACK_ADDRESS = "";
 
@@ -26,7 +27,7 @@ export default function CheckoutPage() {
     "Detecting your current location…",
   );
   const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
-  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<Date | null>(null);
+  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<Date>(() => new Date());
 
   useEffect(() => {
     async function detectAddress(): Promise<string> {
@@ -302,15 +303,17 @@ export default function CheckoutPage() {
                 onClick={() => setIsEditCustomerModalOpen(true)}
                 className="text-[#8cc629] text-[13px] font-medium flex items-center gap-1 hover:underline"
               >
-                Edit Customer Detail <ChevronRight className="w-4 h-4" />
+                Edit Customer Address <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-4 mb-6">
-              <div className="flex items-center gap-3">
-                <User className="text-[#8cc629] w-4.5 h-4.5" />
-                <span className="text-gray-700 text-sm">{`${user?.firstName} ${user?.lastName}`}</span>
-              </div>
+              {user && (
+                <div className="flex items-center gap-3">
+                  <User className="text-[#8cc629] w-4.5 h-4.5" />
+                  <span className="text-gray-700 text-sm">{`${user.firstName} ${user.lastName}`}</span>
+                </div>
+              )}
               <div className="flex items-start gap-3">
                 <MapPin className="text-[#8cc629] w-4.5 h-4.5 mt-0.5" />
                 <span className="text-gray-700 text-sm">{customerAddress}</span>
@@ -420,9 +423,9 @@ export default function CheckoutPage() {
                   <span
                     className={`text-2xl font-bold mb-1 ${paymentOption === "wallet" ? "text-[#8cc629]" : "text-gray-400"}`}
                   >
-                    ₦
+                    {formatCurrency(user?.virtualAccount?.walletbalance ?? 0)}
                   </span>
-                  <span className="text-[11px] font-medium text-gray-800 mb-2">₦ 500.00</span>
+
                   <span className="text-[12px] text-gray-800 mb-4 font-medium">Wallet Balance</span>
                   <div
                     className={`w-4.5 h-4.5 rounded-full flex items-center justify-center ${paymentOption === "wallet" ? "border-4 border-[#8cc629]" : "border border-gray-300"}`}

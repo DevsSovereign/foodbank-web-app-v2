@@ -2,10 +2,20 @@
 
 import React from "react";
 import Image from "next/image";
-import { Copy, Lock } from "lucide-react";
+import { Check, Copy, Lock } from "lucide-react";
 import Link from "next/link";
+import { useUserStore } from "@/store/useUserStore";
+import EmptyState from "@/components/ui/EmptyState";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 
 export default function PersonalDetailsPage() {
+  const { user } = useUserStore();
+  const { copy, copied } = useCopyToClipboard();
+
+  if (!user) {
+    return <EmptyState />;
+  }
+
   return (
     <div className="w-full max-w-4xl space-y-6">
       {/* ACCOUNT SETTINGS */}
@@ -23,33 +33,33 @@ export default function PersonalDetailsPage() {
             <div className="size-16 sm:w-20 sm:h-20 relative shrink-0">
               <Image src="/assets/frame-4580.png" alt="Profile" fill className="object-contain" />
             </div>
-            <div className="flex flex-row items-center gap-3 sm:gap-8 md:gap-12 flex-wrap">
+            {/* <div className="flex flex-row items-center gap-3 sm:gap-8 md:gap-12 flex-wrap">
               <button className="text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap">
                 Remove Avatar
               </button>
               <button className="text-xs sm:text-sm font-medium text-[#8cc629] border border-[#8cc629] rounded-lg px-4 sm:px-6 py-1.5 sm:py-2 hover:bg-[#f0f7e6] transition-colors whitespace-nowrap">
                 Change Avatar
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12 mb-6">
           <div>
             <p className="text-xs text-gray-500 mb-1">Name</p>
-            <p className="text-sm font-semibold text-gray-900">Frank Donald Nnoku</p>
+            <p className="text-sm font-semibold text-gray-900">{`${user.firstName} ${user.lastName}`}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Email</p>
-            <p className="text-sm font-semibold text-gray-900">frankdonald@gmail.com</p>
+            <p className="text-sm font-semibold text-gray-900">{user.email}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Phone Number</p>
-            <p className="text-sm font-semibold text-gray-900">08182936372</p>
+            <p className="text-sm font-semibold text-gray-900">{user.phoneNumber}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Account Region</p>
-            <p className="text-sm font-semibold text-gray-900">Lagos State</p>
+            <p className="text-sm font-semibold text-gray-900">{user.address}</p>
           </div>
         </div>
 
@@ -70,21 +80,19 @@ export default function PersonalDetailsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
           <div>
             <p className="text-xs text-gray-500 mb-1">BVN Number</p>
-            <p className="text-sm font-semibold text-gray-900">224********</p>
+            <p className="text-sm font-semibold text-gray-900">{user.bvn.slice(0, 3)}*******</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Address</p>
-            <p className="text-sm font-semibold text-gray-900">
-              Flat 5, all-Baye street, Ogba, Lagos State
-            </p>
+            <p className="text-sm font-semibold text-gray-900">{user.deliveryAddress}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Date of Birth</p>
-            <p className="text-sm font-semibold text-gray-900">1989-09-09</p>
+            <p className="text-sm font-semibold text-gray-900">{user.dateOfBirth}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Gender</p>
-            <p className="text-sm font-semibold text-gray-900">Male</p>
+            <p className="text-sm capitalize font-semibold text-gray-900">{user.gender}</p>
           </div>
         </div>
       </section>
@@ -101,18 +109,25 @@ export default function PersonalDetailsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
           <div>
             <p className="text-xs text-gray-500 mb-1">Bank Name</p>
-            <p className="text-sm font-semibold text-gray-900">Wema Bank</p>
+            <p className="text-sm font-semibold text-gray-900">{user.virtualAccount.bankName}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Account Holder Name</p>
-            <p className="text-sm font-semibold text-gray-900">Frank Donald Nnoku</p>
+            <p className="text-sm font-semibold text-gray-900">{user.virtualAccount.accountName}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Account Number</p>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-gray-900">224********</p>
-              <button className="text-[#8cc629] hover:text-[#7db424] flex items-center gap-1 text-xs font-medium">
-                Copy <Copy className="size-3" />
+              <p className="text-sm font-semibold text-gray-900">
+                {user.virtualAccount.virtualAccountNumber}
+              </p>
+              <button
+                type="button"
+                onClick={() => copy(user.virtualAccount.virtualAccountNumber)}
+                className="text-[#8cc629] cursor-pointer hover:text-[#7db424] flex items-center gap-1 text-xs font-medium"
+              >
+                {copied ? "Copied" : "Copy"}
+                {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
               </button>
             </div>
           </div>

@@ -24,11 +24,14 @@ export const queryKeys = {
 
 // queries
 export const useGetCustomer = () => {
+  const token = getAuthToken();
+
   const queryResult = useQuery({
     queryKey: [queryKeys.getCustomer],
     queryFn: async () => {
       return await userService.getCustomer();
     },
+    enabled: !!token,
   });
 
   return queryResult;

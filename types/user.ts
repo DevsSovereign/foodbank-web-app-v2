@@ -29,6 +29,7 @@ export interface UserResponse {
   firstName: string;
   lastName: string;
   bvn: string;
+  address: string;
   dateOfBirth: string;
   gender: string;
   maritalStatus: string;

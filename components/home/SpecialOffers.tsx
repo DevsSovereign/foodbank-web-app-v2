@@ -135,7 +135,8 @@ export default function SpecialOffers({
 
   useEffect(() => {
     onLoadingChange?.(isProductsLoading);
-  }, [isProductsLoading, onLoadingChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProductsLoading]);
 
   if (productsError) {
     return (

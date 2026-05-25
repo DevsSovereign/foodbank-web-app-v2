@@ -25,4 +25,8 @@ export const authService = {
   verifyOtp(data: VerifyOtpRequest): Promise<OtpResponse> {
     return apiClient.post<OtpResponse>("/users/email/verify-otp", data);
   },
+
+  async sendForgotPasswordOTP(payload: { email: string }) {
+    return await apiClient.post<{ message: string }>("/sendEmailOTPForForgetPassoword", payload);
+  },
 };

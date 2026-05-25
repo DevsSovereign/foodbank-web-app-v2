@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import {
@@ -20,6 +21,7 @@ export default function NavBar({ breadcrumb }: { breadcrumb?: string }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   let toggleMobileSidebar: (() => void) | undefined;
+
   try {
     const sidebarContext = useSidebar();
     toggleMobileSidebar = sidebarContext.toggleMobileSidebar;
@@ -49,13 +51,13 @@ export default function NavBar({ breadcrumb }: { breadcrumb?: string }) {
 
           <CategoryDropdown triggerStyle="navbar" />
 
-          <Link
+          {/* <Link
             href="#"
             className="hidden md:flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#6cc200] transition font-medium"
           >
             <UtensilsCrossed className="size-4" />
             Food Order
-          </Link>
+          </Link> */}
 
           <Link
             href="/dashboard/support"
@@ -75,7 +77,7 @@ export default function NavBar({ breadcrumb }: { breadcrumb?: string }) {
 
           <button
             className="md:hidden ml-auto text-gray-600 cursor-pointer"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
           >
             {mobileMenuOpen ? (
               <X className="size-5" />
@@ -88,12 +90,12 @@ export default function NavBar({ breadcrumb }: { breadcrumb?: string }) {
 
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 pb-4 pt-2 space-y-3">
-          <Link
+          {/* <Link
             href="#"
             className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
           >
             <UtensilsCrossed className="size-4" /> Food Order
-          </Link>
+          </Link> */}
           <Link
             href="/dashboard/support"
             className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"

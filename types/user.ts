@@ -197,3 +197,28 @@ export interface UserNotificationsResponse {
   timeAgo: string;
   message: NotificationMessage;
 }
+
+export interface UpdateProfilePayload {
+  firstName: string;
+  lastName: string;
+  address?: string;
+  deliveryAddress: string;
+}
+
+export interface TransactionItem {
+  _id: string;
+  status: string;
+  amount: number;
+  description: string;
+  time: string;
+  date: string;
+}
+
+export type TransactionHistoryResponse = {
+  status: string;
+  message: string;
+  data: TransactionItem[];
+  nextCursor: string | null;
+  isNextPage: boolean;
+  count: number;
+};

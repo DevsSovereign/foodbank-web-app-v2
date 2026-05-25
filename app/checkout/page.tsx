@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, Suspense } from "react";
-import { Home, User, MapPin, Phone, ChevronRight, Loader2 } from "lucide-react";
+import { Home, User, MapPin, Phone, ChevronRight, Loader2, Edit } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -12,21 +12,75 @@ import DatePickerModal from "../../components/checkout/DatePickerModal";
 import CheckoutTotal from "@/components/ui/CheckoutTotal";
 import { useUserStore } from "@/store/useUserStore";
 import { formatCurrency } from "@/functions/formatCurrency";
-import { useRouter } from "next/navigation";
 import useUserLocation from "@/hooks/useUserLocation";
+import { useMutation } from "@tanstack/react-query";
+import { cartService } from "@/lib/services/cart.service";
+import { handleError } from "@/lib/handle-error";
+import { CreateOrderPayload } from "@/types/cart";
+import { useSearchParams } from "next/navigation";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { useGetCustomer } from "@/lib/queries";
+import { useRouter } from "next/navigation";
 
 export default function CheckoutPage() {
-  const { user } = useUserStore();
+  const { user, setUser } = useUserStore();
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
   const [purchaseOutright, setPurchaseOutright] = useState<boolean>(false);
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
   const [isAddPhoneModalOpen, setIsAddPhoneModalOpen] = useState<boolean>(false);
-  const [customerPhone, setCustomerPhone] = useState<string>("");
+  const [customerPhone, setCustomerPhone] = useState<string>(user?.phoneNumber ?? "");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
-  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<Date>(() => new Date());
+  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<Date>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  });
   const { customerAddress, setCustomerAddress } = useUserLocation({ isDetectAddress: true });
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const { refetch: refetchUser } = useGetCustomer();
   const router = useRouter();
+
+  const subtotal = Number(searchParams.get("sub") ?? 0);
+  const deliveryFee = Number(searchParams.get("del") ?? 0);
+  const serviceFee = Number(searchParams.get("svc") ?? 500);
+
+  const amountPay = subtotal + deliveryFee + serviceFee;
+
+  const { isPending: orderIsCreating, mutate } = useMutation({
+    mutationFn: cartService.createOrder,
+
+    onSuccess: async () => {
+      await cartService.outrightSubtractFromWalletById({ amountPay });
+      const { data: userProfile } = await refetchUser();
+      if (!userProfile) return;
+
+      setUser(userProfile.customer);
+      toast({ variant: "success", title: "Order Created Successfully" });
+      router.replace("/dashboard/order-history");
+    },
+
+    onError: (error) => {
+      const errMsg = handleError(error);
+      toast({ variant: "error", title: errMsg });
+    },
+  });
+
+  const handleCheckout = () => {
+    const payload: CreateOrderPayload = {
+      deliveryDetails: customerAddress,
+      deliveryFee,
+      serviceFee,
+      deliveryContact: customerPhone || (user?.phoneNumber as string),
+      deliveryDateOption: selectedDeliveryDate.toISOString(),
+      orderType: "outright",
+      topUpAmount: 0,
+      gamified: [],
+    };
+
+    return mutate(payload);
+  };
 
   return (
     <Suspense fallback={<Loader2 className="size-5 animate-spin" />}>
@@ -284,8 +338,15 @@ export default function CheckoutPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="text-[#8cc629] w-4.5 h-4.5" />
-                {customerPhone ? (
-                  <span className="text-gray-700 text-sm font-medium">{customerPhone}</span>
+                {user?.phoneNumber ? (
+                  <div className="flex flex-row items-center gap-1">
+                    <span className="text-gray-700 text-sm font-medium">
+                      {customerPhone || user?.phoneNumber}
+                    </span>
+                    <button type="button" onClick={() => setIsAddPhoneModalOpen(true)}>
+                      <Edit className="w-4 h-4 text-[#8cc629]" />
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={() => setIsAddPhoneModalOpen(true)}
@@ -437,11 +498,18 @@ export default function CheckoutPage() {
 
           <button
             type="button"
-            disabled={!customerAddress || !customerPhone}
-            // onClick={() => router.push("/checkout/payment")}
+            disabled={orderIsCreating || !customerAddress || (!user?.phoneNumber && !customerPhone)}
+            onClick={handleCheckout}
             className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white py-4.5 rounded-md font-bold text-[13px] tracking-wider transition-colors mt-6 uppercase flex justify-center items-center disabled:opacity-50"
           >
-            Confirm Checkout
+            {orderIsCreating ? (
+              <>
+                <Loader2 className="size-5 animate-spin" />
+                Please wait...
+              </>
+            ) : (
+              "Confirm Checkout"
+            )}
           </button>
         </main>
 

@@ -8,18 +8,14 @@ import { useUserStore } from "@/store/useUserStore";
 import { formatCurrency } from "@/functions/formatCurrency";
 import EmptyState from "@/components/ui/EmptyState";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useGetUserTransactions } from "@/lib/queries";
+import LoaderSection from "@/components/ui/Loader";
 
 export default function VerifiedDashboardPage() {
   const [activeTab, setActiveTab] = useState("Wallet");
   const { user } = useUserStore();
   const { copy, copied } = useCopyToClipboard();
-
-  const transactions = Array(1).fill({
-    event: "Wallet Funded",
-    time: "02:37:33 AM",
-    date: "12/12/2025",
-    amount: "+ ₦ 2,000",
-  });
+  const { data: transactions, isLoading: transactionsLoading } = useGetUserTransactions();
 
   if (!user) {
     return <EmptyState />;
@@ -124,60 +120,75 @@ export default function VerifiedDashboardPage() {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="flex justify-between items-center p-6 border-b border-gray-100">
           <h3 className="text-sm font-bold text-gray-800 tracking-wider">TRANSACTION HISTORY</h3>
-          <Link
-            href="#"
-            className="flex items-center gap-1 text-[#f27a22] text-sm font-medium hover:underline"
-          >
-            Next <ArrowRight size={16} />
-          </Link>
+          {transactions && transactions?.isNextPage && (
+            <Link
+              href="#"
+              className="flex items-center gap-1 text-[#f27a22] text-sm font-medium hover:underline"
+            >
+              Next <ArrowRight size={16} />
+            </Link>
+          )}
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 text-xs text-gray-500 font-medium">
-                <th className="px-6 py-4">EVENT</th>
-                <th className="px-6 py-4">TIME</th>
-                <th className="px-6 py-4">DATE</th>
-                <th className="px-6 py-4 text-right">AMOUNT</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {transactions.map((tx, index) => (
-                <tr key={index} className="hover:bg-gray-50/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="size-8 rounded-full bg-[#f0f7e6] flex items-center justify-center">
-                        <Image
-                          src="/assets/solar_circle-top-up-linear.png"
-                          alt="Top up"
-                          width={16}
-                          height={16}
-                        />
-                      </div>
-                      <span className="text-sm text-gray-700 font-medium">{tx.event}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{tx.time}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{tx.date}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-[#8cc629] text-right">
-                    {tx.amount}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="p-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-500">Showing 1 - 10 transactions of 1230 Transactions</p>
-          <div className="flex gap-2">
-            <button className="px-4 py-2 border border-gray-200 rounded-md text-xs font-medium text-gray-400 cursor-not-allowed">
-              Previous
-            </button>
-            <button className="px-4 py-2 border border-gray-200 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-              Next
-            </button>
-          </div>
+          {transactionsLoading ? (
+            <LoaderSection />
+          ) : !transactions || transactions.data.length < 1 ? (
+            <div className="w-full p-4">
+              <span className="font-medium">No transaction history</span>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 w-full">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50 text-xs text-gray-500 font-medium">
+                    <th className="px-6 py-4">EVENT</th>
+                    <th className="px-6 py-4">TIME</th>
+                    <th className="px-6 py-4">DATE</th>
+                    <th className="px-6 py-4 text-right">AMOUNT</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-gray-100">
+                  {transactions.data.map((tx) => (
+                    <tr key={tx._id} className="hover:bg-gray-50/30 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-8 rounded-full bg-[#f0f7e6] flex items-center justify-center">
+                            <Image
+                              src="/assets/solar_circle-top-up-linear.png"
+                              alt="Top up"
+                              width={16}
+                              height={16}
+                            />
+                          </div>
+                          <span className="text-sm text-gray-700 font-medium">{tx.status}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{tx.time}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{tx.date}</td>
+                      <td className="px-6 py-4 text-sm font-bold text-[#8cc629] text-right">
+                        {formatCurrency(tx.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {transactions?.isNextPage && (
+                <div className="p-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex gap-2">
+                    <button className="px-4 py-2 border border-gray-200 rounded-md text-xs font-medium text-gray-400 cursor-not-allowed">
+                      Previous
+                    </button>
+                    <button className="px-4 py-2 border border-gray-200 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

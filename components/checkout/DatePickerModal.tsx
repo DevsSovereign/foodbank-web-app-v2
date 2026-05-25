@@ -27,8 +27,9 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
 
   if (!isOpen) return null;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const minSelectableDate = new Date();
+  minSelectableDate.setHours(0, 0, 0, 0);
+  minSelectableDate.setDate(minSelectableDate.getDate() + 1);
 
   const nextMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
@@ -39,7 +40,7 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
   };
 
   const isDateDisabled = (date: Date) => {
-    return date < today;
+    return date < minSelectableDate;
   };
 
   const handleDateClick = (date: Date) => {

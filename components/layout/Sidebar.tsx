@@ -11,9 +11,9 @@ import {
   FileText,
   Clock,
   Truck,
-  CreditCard,
-  RotateCcw,
-  Gift,
+  // CreditCard,
+  // RotateCcw,
+  // Gift,
   HelpCircle,
   LifeBuoy,
   HeadphonesIcon,
@@ -168,30 +168,34 @@ export default function Sidebar() {
                       Personal Details
                     </Link>
                   </li>
-                  <li>
+                  {/* <li>
                     <Link
                       href="/dashboard/account/personal-details#job-information"
                       className="block px-11 py-2 text-sm text-gray-600 hover:text-[#8cc629] border-l-2 border-transparent"
                     >
                       Job Information
                     </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/dashboard/account/personal-details#bvn-information"
-                      className="block px-11 py-2 text-sm text-gray-600 hover:text-[#8cc629] border-l-2 border-transparent"
-                    >
-                      BVN Information
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/dashboard/account/personal-details#virtual-account"
-                      className="block px-11 py-2 text-sm text-gray-600 hover:text-[#8cc629] border-l-2 border-transparent"
-                    >
-                      Virtual Account
-                    </Link>
-                  </li>
+                  </li> */}
+                  {user?.accountType === "flexible" && (
+                    <>
+                      <li>
+                        <Link
+                          href="/dashboard/account/personal-details#bvn-information"
+                          className="block px-11 py-2 text-sm text-gray-600 hover:text-[#8cc629] border-l-2 border-transparent"
+                        >
+                          BVN Information
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href="/dashboard/account/personal-details#virtual-account"
+                          className="block px-11 py-2 text-sm text-gray-600 hover:text-[#8cc629] border-l-2 border-transparent"
+                        >
+                          Virtual Account
+                        </Link>
+                      </li>
+                    </>
+                  )}
                 </ul>
               )}
             </li>
@@ -211,7 +215,7 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
-                href="/dashboard/terms"
+                href="/terms"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                   isActive("/dashboard/terms") && !isActive("/dashboard/terms-and-conditions")
                     ? "bg-[#f0f7e6] text-[#8cc629]"
@@ -248,7 +252,7 @@ export default function Sidebar() {
                 <span className="font-medium">Track Delivery</span>
               </Link>
             </li>
-            <li>
+            {/* <li>
               <Link
                 href="/dashboard/loan-history"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
@@ -260,8 +264,8 @@ export default function Sidebar() {
                 <CreditCard size={20} />
                 <span className="font-medium">Loan History</span>
               </Link>
-            </li>
-            <li>
+            </li> */}
+            {/* <li>
               <Link
                 href="/dashboard/card-information"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
@@ -273,8 +277,8 @@ export default function Sidebar() {
                 <CreditCard size={20} />
                 <span className="font-medium">Card Information</span>
               </Link>
-            </li>
-            <li>
+            </li> */}
+            {/* <li>
               <Link
                 href="/dashboard/repayment-history"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
@@ -286,8 +290,8 @@ export default function Sidebar() {
                 <RotateCcw size={20} />
                 <span className="font-medium">Repayment History</span>
               </Link>
-            </li>
-            <li>
+            </li> */}
+            {/* <li>
               <Link
                 href="/dashboard/reward-history"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
@@ -299,7 +303,7 @@ export default function Sidebar() {
                 <Gift size={20} />
                 <span className="font-medium">Reward History</span>
               </Link>
-            </li>
+            </li> */}
             <li>
               <Link
                 href="/dashboard/faqs"

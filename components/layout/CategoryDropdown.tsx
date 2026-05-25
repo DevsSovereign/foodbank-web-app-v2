@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
 import { AlignLeft, ChevronDown } from "lucide-react";
 import { categoryService } from "@/lib/services/category.service";
 import type { CategoryDto } from "@/types/category";
+import { useRouter } from "next/navigation";
 
 /** Capitalise each word, e.g. "frozen foods" → "Frozen Foods". */
 function capitalizeWords(str: string): string {
@@ -24,6 +24,7 @@ export default function CategoryDropdown({
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -45,9 +46,11 @@ export default function CategoryDropdown({
     }
 
     fetchCategories();
+
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export default function CategoryDropdown({
     <div className="relative" ref={dropdownRef}>
       {triggerStyle === "navbar" ? (
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => setIsOpen((prev) => !prev)}
           className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 text-gray-600 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-gray-100 transition whitespace-nowrap"
         >
           <AlignLeft className="size-3.5" />
@@ -75,7 +78,7 @@ export default function CategoryDropdown({
         </button>
       ) : (
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => setIsOpen((prev) => !prev)}
           className="flex items-center justify-between w-full md:w-auto md:gap-1.5 bg-white border border-gray-100 text-gray-600 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-gray-100 transition shadow-sm"
         >
           <span className="flex items-center gap-2 md:gap-1.5">
@@ -114,31 +117,31 @@ export default function CategoryDropdown({
       )}
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-[240px] bg-white border border-gray-100 rounded-md shadow-xl z-50 py-5 px-6 max-h-[400px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="absolute top-full left-0 mt-2 w-60 bg-white border border-gray-100 rounded-md shadow-xl z-50 py-5 px-6 max-h-100 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <h2 className="text-xs font-bold text-[#1a2b49] mb-4 uppercase tracking-wide">
             Categories
           </h2>
           <ul className="space-y-4">
-            {isLoading && <li className="text-[13px] text-gray-400">Loading…</li>}
-
-            {!isLoading && categories.length === 0 && (
+            {isLoading ? (
+              <li className="text-[13px] text-gray-400">Loading…</li>
+            ) : categories.length < 1 ? (
               <li className="text-[13px] text-gray-400">No categories found.</li>
-            )}
-
-            {!isLoading &&
-              categories.map((cat, idx) => {
+            ) : (
+              categories.map((cat) => {
                 const isSelected = selectedCategory === cat.type;
+
                 return (
                   <li
-                    key={idx}
+                    key={cat._id}
                     className="flex items-center gap-3 cursor-pointer group"
                     onClick={() => {
                       setSelectedCategory(cat.type);
                       setIsOpen(false);
+                      router.push(`/search?type=${encodeURIComponent(cat.type)}`);
                     }}
                   >
                     <div
-                      className={`size-[18px] rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0 ${isSelected ? "border-[#70c400]" : "border-gray-200 group-hover:border-[#70c400]"}`}
+                      className={`size-4.5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${isSelected ? "border-[#70c400]" : "border-gray-200 group-hover:border-[#70c400]"}`}
                     >
                       {isSelected && <div className="size-2.5 rounded-full bg-[#70c400]" />}
                     </div>
@@ -149,7 +152,8 @@ export default function CategoryDropdown({
                     </span>
                   </li>
                 );
-              })}
+              })
+            )}
           </ul>
         </div>
       )}

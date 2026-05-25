@@ -7,6 +7,7 @@ import type {
   DeleteCartItemResponse,
   UserFirstOrder,
   ApplicableFees,
+  CreateOrderPayload,
 } from "@/types/cart";
 
 /**
@@ -76,7 +77,14 @@ export const cartService = {
   },
 
   async getOrderPrices(): Promise<{ allfees: ApplicableFees[] }> {
-    const res = await apiClient.get<{ allfees: ApplicableFees[] }>("/get-allFees");
-    return res;
+    return await apiClient.get<{ allfees: ApplicableFees[] }>("/get-allFees");
+  },
+
+  async createOrder(payload: CreateOrderPayload) {
+    return await apiClient.post("/create-order", payload);
+  },
+
+  async outrightSubtractFromWalletById(payload: { amountPay: number }) {
+     return await apiClient.post("/OutrightSubtractFromWalletById", payload);
   },
 };

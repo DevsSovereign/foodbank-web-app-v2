@@ -22,6 +22,8 @@ export const queryKeys = {
   getCategories: "getCategories",
   firstOrder: "firstOrder",
   allFees: "allFees",
+  accountOfficer: "accountOfficer",
+  transactions: "transactions",
 };
 
 // queries
@@ -167,6 +169,28 @@ export const useGetAllFees = () => {
     queryKey: [queryKeys.allFees],
     queryFn: async () => {
       return await cartService.getOrderPrices();
+    },
+  });
+
+  return queryResult;
+};
+
+export const useGetAccountOfficer = () => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.accountOfficer],
+    queryFn: async () => {
+      return await userService.getAccountOfficer();
+    },
+  });
+
+  return queryResult;
+};
+
+export const useGetUserTransactions = () => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.transactions],
+    queryFn: async () => {
+      return await userService.getUserTransactions();
     },
   });
 

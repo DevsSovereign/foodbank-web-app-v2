@@ -77,7 +77,8 @@ export default function Footer() {
             <h4 className="text-sm font-medium mb-3">Download our Mobile App</h4>
             <div className="flex flex-wrap lg:flex-nowrap gap-3">
               <a
-                href="#"
+                href="https://apps.apple.com/ng/app/foodbankapp/id6608982689"
+                target="_blank"
                 className="flex items-center bg-[#2a2a2a] rounded-lg px-4 py-2.5 hover:bg-[#3a3a3a] transition cursor-pointer whitespace-nowrap"
               >
                 <Image
@@ -92,9 +93,10 @@ export default function Footer() {
                   <p className="text-sm font-semibold text-white leading-tight">App Store</p>
                 </div>
               </a>
-              
+
               <a
-                href="#"
+                href="https://play.google.com/store/apps/details?id=com.foodbank4u.app"
+                target="_blank"
                 className="flex items-center bg-[#2a2a2a] rounded-lg px-4 py-2.5 hover:bg-[#3a3a3a] transition cursor-pointer whitespace-nowrap"
               >
                 <Image

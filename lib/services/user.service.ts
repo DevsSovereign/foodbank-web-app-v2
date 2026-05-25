@@ -6,6 +6,8 @@ import {
   UserRepaymentHistory,
   UserResponse,
   UserNotificationsResponse,
+  UpdateProfilePayload,
+  TransactionHistoryResponse,
 } from "@/types/user";
 import { apiClient } from "../api-client";
 
@@ -52,5 +54,22 @@ export const userService = {
 
   async getFAQs(): Promise<{ faqs: [] }> {
     return await apiClient.get<{ faqs: [] }>(`/getFaqs`);
+  },
+
+  async updateProfile(payload: UpdateProfilePayload) {
+    return await apiClient.put<{ message: string }>("/editProfileInfo", payload);
+  },
+
+  async getAccountOfficer() {
+    const response = await apiClient.get<{
+      data: { staff: Pick<UserResponse, "email" | "firstName" | "lastName" | "phoneNumber"> };
+    }>(`/account-officer-staff/customer`);
+    return response.data.staff;
+  },
+
+  async getUserTransactions() {
+    return await apiClient.get<TransactionHistoryResponse>(
+      `/users/transaction-history/transactions?limit=5`,
+    );
   },
 };

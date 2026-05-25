@@ -1,4 +1,5 @@
 import type { ApiResponse } from "./api";
+import { UserResponse } from "./user";
 
 // ---------------------------------------------------------------------------
 // Cart Item — shape returned by GET /getCartItems
@@ -110,4 +111,37 @@ export interface AddToCartRequest {
 /** Response from POST /addToCart */
 export interface AddToCartResponse extends ApiResponse {
   message: string;
+}
+
+export interface UserFirstOrder {
+  hasOrderedBefore: boolean;
+  lastOrderDate: string;
+  lastOrderId: string;
+  message: string;
+}
+
+export interface CreateOrderPayload {
+  deliveryDetails: string;
+  deliveryFee: number;
+  serviceFee: number;
+  deliveryContact: string;
+  deliveryDateOption: string;
+  orderType: UserResponse["accountType"];
+  topUpAmount: number;
+  gamified: {
+    rewardId: string;
+    rewardType: string;
+  }[];
+}
+
+export interface ApplicableFees {
+  createdAt: string;
+  deliveryFee: number;
+  increment: number;
+  interest: number;
+  isFreeDeliveryOnFirstOrder: boolean;
+  serviceFee: number;
+  stateLocation: string;
+  updatedAt: string;
+  _id: string;
 }

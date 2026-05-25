@@ -20,6 +20,8 @@ export const queryKeys = {
   getWishlist: "getWishlist",
   getProducts: "getProducts",
   getCategories: "getCategories",
+  firstOrder: "firstOrder",
+  allFees: "allFees",
 };
 
 // queries
@@ -142,6 +144,29 @@ export const useGetProducts = () => {
     queryKey: [queryKeys.getProducts],
     queryFn: async () => {
       return await productService.getProducts();
+    },
+  });
+
+  return queryResult;
+};
+
+export const useCheckFirstOrder = ({ userId }: { userId: string }) => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.firstOrder],
+    queryFn: async () => {
+      return await cartService.checkFirstOrder({ userId });
+    },
+    enabled: !!userId,
+  });
+
+  return queryResult;
+};
+
+export const useGetAllFees = () => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.allFees],
+    queryFn: async () => {
+      return await cartService.getOrderPrices();
     },
   });
 

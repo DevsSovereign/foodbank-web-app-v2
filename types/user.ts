@@ -34,7 +34,7 @@ export interface UserResponse {
   gender: string;
   maritalStatus: string;
   middleName: string;
-  accountType: string;
+  accountType: "flexible" | "outright";
   adminVerification: string;
   bankStatement: string;
   bankStatementPassword: string;

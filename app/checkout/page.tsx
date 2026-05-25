@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, Suspense } from "react";
-import { Home, User, MapPin, Phone, CreditCard, ChevronRight, Loader2 } from "lucide-react";
+import { useState, Suspense } from "react";
+import { Home, User, MapPin, Phone, ChevronRight, Loader2 } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -12,8 +12,8 @@ import DatePickerModal from "../../components/checkout/DatePickerModal";
 import CheckoutTotal from "@/components/ui/CheckoutTotal";
 import { useUserStore } from "@/store/useUserStore";
 import { formatCurrency } from "@/functions/formatCurrency";
-
-const FALLBACK_ADDRESS = "";
+import { useRouter } from "next/navigation";
+import useUserLocation from "@/hooks/useUserLocation";
 
 export default function CheckoutPage() {
   const { user } = useUserStore();
@@ -23,46 +23,10 @@ export default function CheckoutPage() {
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
   const [isAddPhoneModalOpen, setIsAddPhoneModalOpen] = useState<boolean>(false);
   const [customerPhone, setCustomerPhone] = useState<string>("");
-  const [customerAddress, setCustomerAddress] = useState<string>(
-    "Detecting your current location…",
-  );
   const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
   const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<Date>(() => new Date());
-
-  useEffect(() => {
-    async function detectAddress(): Promise<string> {
-      if (!navigator.geolocation) return FALLBACK_ADDRESS;
-
-      return new Promise<string>((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-          async ({ coords }) => {
-            try {
-              const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json`,
-                { headers: { "Accept-Language": "en" } },
-              );
-              const data = await res.json();
-              const a = data.address ?? {};
-              const parts = [
-                a.house_number,
-                a.road,
-                a.suburb ?? a.neighbourhood ?? a.quarter,
-                a.city ?? a.town ?? a.village,
-                a.state,
-              ].filter(Boolean);
-              resolve(parts.length ? parts.join(", ") : FALLBACK_ADDRESS);
-            } catch {
-              resolve(FALLBACK_ADDRESS);
-            }
-          },
-          () => resolve(FALLBACK_ADDRESS),
-          { timeout: 8000 },
-        );
-      });
-    }
-
-    detectAddress().then(setCustomerAddress);
-  }, []);
+  const { customerAddress, setCustomerAddress } = useUserLocation({ isDetectAddress: true });
+  const router = useRouter();
 
   return (
     <Suspense fallback={<Loader2 className="size-5 animate-spin" />}>
@@ -436,7 +400,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                <div
+                {/* <div
                   onClick={() => setPaymentOption("online")}
                   className={`flex-1 flex flex-col items-center justify-center cursor-pointer transition-colors ${paymentOption === "online" ? "bg-white" : "bg-gray-50"}`}
                 >
@@ -452,33 +416,38 @@ export default function CheckoutPage() {
                       <div className="w-1.5 h-1.5 rounded-full bg-[#8cc629]"></div>
                     )}
                   </div>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
 
-          <div className="bg-[#f0f9e1] rounded-lg p-5 px-6 flex justify-between items-center transition-opacity">
-            <span className="text-[#1e293b] text-[15px] font-bold">Purchase Outright</span>
-            <button
-              onClick={() => setPurchaseOutright((prev) => !prev)}
-              className={`w-11 h-6 rounded-full relative flex items-center p-1 transition-colors duration-300 ease-in-out ${purchaseOutright ? "bg-[#8cc629]" : "bg-gray-200"}`}
-            >
-              <span
-                className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${purchaseOutright ? "translate-x-5" : "translate-x-0"}`}
-              ></span>
-            </button>
-          </div>
+          {user?.accountType === "flexible" && (
+            <div className="bg-[#f0f9e1] rounded-lg p-5 px-6 flex justify-between items-center transition-opacity">
+              <span className="text-[#1e293b] text-[15px] font-bold">Purchase Outright</span>
+              <button
+                onClick={() => setPurchaseOutright((prev) => !prev)}
+                className={`w-11 h-6 rounded-full relative flex items-center p-1 transition-colors duration-300 ease-in-out ${purchaseOutright ? "bg-[#8cc629]" : "bg-gray-200"}`}
+              >
+                <span
+                  className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${purchaseOutright ? "translate-x-5" : "translate-x-0"}`}
+                ></span>
+              </button>
+            </div>
+          )}
 
-          <Link
-            href="/checkout/payment"
-            className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white py-4.5 rounded-md font-bold text-[13px] tracking-wider transition-colors mt-6 uppercase flex justify-center items-center"
+          <button
+            type="button"
+            disabled={!customerAddress || !customerPhone}
+            // onClick={() => router.push("/checkout/payment")}
+            className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white py-4.5 rounded-md font-bold text-[13px] tracking-wider transition-colors mt-6 uppercase flex justify-center items-center disabled:opacity-50"
           >
             Confirm Checkout
-          </Link>
+          </button>
         </main>
 
         <Footer />
 
+        {/* modals */}
         <EditCustomerModal
           isOpen={isEditCustomerModalOpen}
           onClose={() => setIsEditCustomerModalOpen(false)}

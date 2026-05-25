@@ -3,6 +3,8 @@ import Link from "next/link";
 import Image from "next/image";
 
 export default function Footer() {
+  const year = new Date().getFullYear();
+
   return (
     <footer className="bg-[#0a0a0a] text-white pt-12 pb-8 border-t-4 border-orange-500">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -90,6 +92,7 @@ export default function Footer() {
                   <p className="text-sm font-semibold text-white leading-tight">App Store</p>
                 </div>
               </a>
+              
               <a
                 href="#"
                 className="flex items-center bg-[#2a2a2a] rounded-lg px-4 py-2.5 hover:bg-[#3a3a3a] transition cursor-pointer whitespace-nowrap"
@@ -112,7 +115,7 @@ export default function Footer() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 mt-12 pt-6 border-t border-gray-800 text-center text-xs text-gray-500">
-        © 2025 Foodbank. All Rights Reserved | Powered by:{" "}
+        © {year} Foodbank. All Rights Reserved | Powered by:{" "}
         <span className="text-orange-500">Sovereign Tech and Innovations</span>
       </div>
     </footer>

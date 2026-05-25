@@ -3,26 +3,28 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Home, Loader2, Search } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { cartService } from "@/lib/services/cart.service";
-import type { CartItem } from "@/types/cart";
+import type { ApplicableFees, CartItem } from "@/types/cart";
 import { toCartItem } from "@/types/cart";
 import { useRouter } from "next/navigation";
 import { getAuthToken } from "@/lib/auth-utils";
 import ErrorSection from "@/components/ui/ErrorSection";
 import { handleError } from "@/lib/handle-error";
 import { useToast } from "@/components/ui/toast/ToastProvider";
-import { queryKeys, useGetCartItems } from "@/lib/queries";
+import { queryKeys, useCheckFirstOrder, useGetAllFees, useGetCartItems } from "@/lib/queries";
 import { useQueryClient } from "@tanstack/react-query";
 import SubHeader from "@/components/sub-header";
+import useUserLocation from "@/hooks/useUserLocation";
+import { useUserStore } from "@/store/useUserStore";
 
 export default function CartPage() {
+  const { user } = useUserStore();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-
   const [isInstructionAgreed, setIsInstructionAgreed] = useState<boolean>(false);
   const router = useRouter();
   const token = getAuthToken();
@@ -33,11 +35,30 @@ export default function CartPage() {
     error: cartItemsError,
     refetch: refetchCartItems,
   } = useGetCartItems();
+  const { data: allFeesResponse } = useGetAllFees();
+  const { data: firstOrder } = useCheckFirstOrder({ userId: user?._id ?? "" });
+  const { customerState } = useUserLocation({ isDetectAddress: true });
   const queryClient = useQueryClient();
 
+  const locationFee = useMemo(() => {
+    return allFeesResponse?.allfees?.find((fee) => {
+      return customerState.toLowerCase().includes(fee.stateLocation.toLowerCase());
+    });
+  }, [allFeesResponse, customerState]);
+
+  const applicableFee = useMemo(() => {
+    if (!locationFee) return {} as ApplicableFees;
+
+    if (!locationFee.isFreeDeliveryOnFirstOrder) return locationFee;
+
+    if (firstOrder && !firstOrder.hasOrderedBefore) return { ...locationFee, deliveryFee: 0 };
+
+    return locationFee;
+  }, [firstOrder, locationFee]);
+
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const deliveryCharge = 0;
-  const serviceCharge = 500;
+  const deliveryCharge = applicableFee?.deliveryFee || 0;
+  const serviceCharge = applicableFee?.serviceFee || 0;
   const total = subtotal + deliveryCharge + serviceCharge;
 
   const isEmpty = cartItems.length === 0;

@@ -5,6 +5,8 @@ import type {
   AddToCartResponse,
   DeleteCartItemRequest,
   DeleteCartItemResponse,
+  UserFirstOrder,
+  ApplicableFees,
 } from "@/types/cart";
 
 /**
@@ -67,5 +69,14 @@ export const cartService = {
     }).toString();
     // Send both query params and JSON body for compatibility with backend variants.
     return apiClient.post<AddToCartResponse>(`/addToCart?${qs}`, data);
+  },
+
+  async checkFirstOrder({ userId }: { userId: string }) {
+    return await apiClient.get<UserFirstOrder>(`/checkUserHasOrder/${userId}`);
+  },
+
+  async getOrderPrices(): Promise<{ allfees: ApplicableFees[] }> {
+    const res = await apiClient.get<{ allfees: ApplicableFees[] }>("/get-allFees");
+    return res;
   },
 };

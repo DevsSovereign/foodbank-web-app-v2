@@ -1,54 +1,25 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import { useLoadScript } from "@react-google-maps/api";
 
 import AddressSearch from "./map/AddressSearch";
+import useUserLocation from "@/hooks/useUserLocation";
 
 // MapView uses browser-only Google Maps APIs — load without SSR
 const MapView = dynamic(() => import("./map/MapView"), { ssr: false });
 
 const LIBRARIES: ("places" | "geometry")[] = ["places"];
 
-const LAGOS_FALLBACK: google.maps.LatLngLiteral = { lat: 6.5244, lng: 3.3792 };
-
 export default function HomePageMap() {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
     libraries: LIBRARIES,
   });
-
-  const [userLocation, setUserLocation] = useState<google.maps.LatLngLiteral>(LAGOS_FALLBACK);
   const [markerPosition, setMarkerPosition] = useState<google.maps.LatLngLiteral | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
 
-  // Silent fetch on mount — setState only inside the async callback, never synchronously
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        setUserLocation({ lat: coords.latitude, lng: coords.longitude });
-      },
-      () => {},
-      { enableHighAccuracy: true, timeout: 10_000 },
-    );
-  }, []);
-
-  // User-triggered locate (shows spinner)
-  const locateUser = useCallback(() => {
-    if (!navigator.geolocation) return;
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        setUserLocation({ lat: coords.latitude, lng: coords.longitude });
-        setIsLocating(false);
-      },
-      () => setIsLocating(false),
-      { enableHighAccuracy: true, timeout: 10_000 },
-    );
-  }, []);
+  const { isLocating, handleLocateUser, userLocation, setUserLocation } = useUserLocation({});
 
   const handleSelectAddress = (_address: string, latLng: google.maps.LatLngLiteral) => {
     setMarkerPosition(latLng);
@@ -56,7 +27,7 @@ export default function HomePageMap() {
   };
 
   const handleUseCurrentLocation = () => {
-    locateUser();
+    handleLocateUser();
     setMarkerPosition(null);
   };
 

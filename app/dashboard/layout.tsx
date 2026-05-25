@@ -19,7 +19,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const {
     data: customerData,
     isLoading: customerDataLoading,
-    // isRefetching: customerDataRefetching,
     error: customerDataError,
     refetch: refetchCustomerData,
   } = useGetCustomer();

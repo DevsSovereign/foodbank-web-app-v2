@@ -6,7 +6,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { authService } from "@/lib/services/auth.service";
-import { ApiError } from "@/types/api";
+import { useToast } from "../ui/toast/ToastProvider";
+import { handleError } from "@/lib/handle-error";
 
 export default function SignUpForm() {
   const router = useRouter();
@@ -24,6 +25,8 @@ export default function SignUpForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  const { toast } = useToast();
 
   // — Validation errors (per-field) ——————————————
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -94,43 +97,14 @@ export default function SignUpForm() {
       // Send OTP to the user's email for verification
       try {
         await authService.sendOtp({ email: email.trim() });
-      } catch {
-        // OTP send failure is non-blocking — they can resend on the verify page
-      }
-
-      // Redirect to verify page with email as query param
-      setTimeout(() => {
         router.push(`/verify?email=${encodeURIComponent(email.trim())}`);
-      }, 1500);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        // If the account already exists, assume email may not be verified —
-        // send OTP and redirect to the verify page.
-        const isAlreadyExists = err.message.toLowerCase().includes("already exists");
-
-        if (isAlreadyExists && email.trim()) {
-          // Try sending OTP — success means email is unverified,
-          // failure means email is already verified → go to login.
-          try {
-            await authService.sendOtp({ email: email.trim() });
-            setSuccessMessage("Account already exists. Redirecting to verify your email...");
-            setTimeout(() => {
-              router.push(`/verify?email=${encodeURIComponent(email.trim())}`);
-            }, 1500);
-          } catch {
-            // OTP failed → email is already verified, just login
-            setSuccessMessage("Account already verified. Redirecting to login...");
-            setTimeout(() => {
-              router.push("/login");
-            }, 1500);
-          }
-          return;
-        }
-
-        setErrors({ api: err.message });
-      } else {
-        setErrors({ api: "Something went wrong. Please try again." });
+      } catch (error) {
+        const errMsg = handleError(error);
+        toast({ variant: "error", title: errMsg });
       }
+    } catch (err) {
+      const errorMessage = handleError(err);
+      toast({ variant: "error", title: errorMessage });
     } finally {
       setIsLoading(false);
     }

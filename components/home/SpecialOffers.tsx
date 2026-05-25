@@ -1,15 +1,22 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Heart, ShoppingCart, ArrowRight, Eye } from "lucide-react";
 import Link from "next/link";
-import { productService } from "@/lib/services/product.service";
-import type { ProductDto } from "@/types/product";
 import { wishlistService } from "@/lib/services/wishlist.service";
-import { ApiError } from "@/types/api";
 import { cartService } from "@/lib/services/cart.service";
 import { useToast } from "@/components/ui/toast/ToastProvider";
+import { queryKeys, useGetCartItems, useGetProducts, useGetWishlistItems } from "@/lib/queries";
+import { useQueryClient } from "@tanstack/react-query";
+import { handleError } from "@/lib/handle-error";
+import ErrorSection from "../ui/ErrorSection";
+import { getAuthToken } from "@/lib/auth-utils";
+import { useRouter } from "next/navigation";
+import { CartItemDto } from "@/types/cart";
+import useCheckIfExist from "@/hooks/useCheckIfExist";
+import { WishlistItemDto } from "@/types/wishlist";
 
 /** Format a number as Naira, e.g. 45000 → "₦45,000" */
 function formatPrice(amount: number): string {
@@ -24,194 +31,130 @@ export default function SpecialOffers({
 }: {
   onLoadingChange?: (isLoading: boolean) => void;
 }) {
+  const [isAdding, setIsAdding] = useState<boolean>(false);
+  const {
+    data: productsData,
+    error: productsError,
+    isLoading: isProductsLoading,
+    refetch: refetchProducts,
+  } = useGetProducts();
+  const { data: cartItemsResponse } = useGetCartItems();
+  const { data: wishlistItemsData, refetch: refetchWishList } = useGetWishlistItems();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [products, setProducts] = useState<ProductDto[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [wishlistIds, setWishlistIds] = useState<Set<string>>(() => new Set());
-  const [wishlistPendingIds, setWishlistPendingIds] = useState<Set<string>>(() => new Set());
-  const [wishlistItemIdByProductId, setWishlistItemIdByProductId] = useState<Map<string, string>>(
-    () => new Map(),
-  );
-  const [cartPendingIds, setCartPendingIds] = useState<Set<string>>(() => new Set());
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchProducts() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await productService.getProducts();
-        if (!cancelled) {
-          setProducts(data);
-        }
-      } catch {
-        if (!cancelled) {
-          setError("Failed to load products. Please try again.");
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-
-    fetchProducts();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    onLoadingChange?.(isLoading);
-  }, [isLoading, onLoadingChange]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const token = typeof window !== "undefined" ? sessionStorage.getItem("fb4u_token") : null;
-    if (!token) return;
-
-    async function fetchWishlist() {
-      try {
-        const response = await wishlistService.getWishlistItems();
-        if (cancelled) return;
-        const map = new Map<string, string>();
-        const ids = new Set<string>();
-        for (const item of response.data ?? []) {
-          const productId = item.productId;
-          const wishlistItemId = item.id;
-          if (typeof productId !== "string" || typeof wishlistItemId !== "string") continue;
-          map.set(productId, wishlistItemId);
-          ids.add(productId);
-        }
-        setWishlistItemIdByProductId(map);
-        setWishlistIds(ids);
-      } catch {
-        // ignore
-      }
-    }
-
-    fetchWishlist();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const token = getAuthToken();
+  const router = useRouter();
+  const { itemIds: cartPendingIds, setItemIds: setCartPendingIds } = useCheckIfExist({
+    itemList: cartItemsResponse ? cartItemsResponse?.data : ([] as CartItemDto[]),
+  });
+  const { itemIds: wishlistIds, setItemIds: setWishlistIds } = useCheckIfExist({
+    itemList: wishlistItemsData ? wishlistItemsData?.data : ([] as WishlistItemDto[]),
+  });
 
   // Pick the first product as "featured" and the rest for the grid
-  const featured = products[0] ?? null;
-  const gridProducts = products.slice(1, 7); // Show 6 in the grid
+  const featured = productsData ? productsData[0] : null;
+  const gridProducts = productsData ? productsData.slice(1, 7) : []; // Show 6 in the grid
 
   const addToWishlist = async (productId: string) => {
-    const token = typeof window !== "undefined" ? sessionStorage.getItem("fb4u_token") : null;
     if (!token) {
-      window.location.href = "/login";
-      return;
+      return router.replace("/login");
     }
-    if (wishlistPendingIds.has(productId)) return;
-
-    setWishlistPendingIds((prev) => new Set(prev).add(productId));
 
     try {
-      const existingItemId = wishlistItemIdByProductId.get(productId);
-      if (existingItemId) {
-        // Optimistic remove
-        setWishlistIds((prev) => {
-          const next = new Set(prev);
-          next.delete(productId);
-          return next;
-        });
-        setWishlistItemIdByProductId((prev) => {
-          const next = new Map(prev);
-          next.delete(productId);
-          return next;
-        });
-        await wishlistService.deleteWishlistItem({ itemId: existingItemId });
-        toast({ title: "Removed from wishlist", variant: "info" });
-      } else {
+      const existingItemId = wishlistIds.has(productId);
+
+      // if it doesnt exist in wishlist
+      if (!existingItemId) {
         // Optimistic add
         setWishlistIds((prev) => new Set(prev).add(productId));
         await wishlistService.addToWishlist({ productId, quantity: 1 });
-        toast({
+        // await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
+
+        const response = await refetchWishList();
+        if (!response.data) return;
+
+        const ids = new Set<string>();
+        for (const item of response.data.data ?? []) {
+          const productId = item.productId;
+          if (!productId) return;
+
+          ids.add(productId);
+        }
+
+        setWishlistIds(ids);
+
+        return toast({
           title: "Added to wishlist",
           description: "You can view it in your wishlist.",
           variant: "success",
         });
+      }
 
-        const response = await wishlistService.getWishlistItems();
-        const map = new Map<string, string>();
-        const ids = new Set<string>();
-        for (const item of response.data ?? []) {
-          const productId = item.productId;
-          const wishlistItemId = item.id;
-          if (typeof productId !== "string" || typeof wishlistItemId !== "string") continue;
-          map.set(productId, wishlistItemId);
-          ids.add(productId);
-        }
-        setWishlistItemIdByProductId(map);
-        setWishlistIds(ids);
-      }
-    } catch (err) {
-      try {
-        const response = await wishlistService.getWishlistItems();
-        const map = new Map<string, string>();
-        const ids = new Set<string>();
-        for (const item of response.data ?? []) {
-          const productId = item.productId;
-          const wishlistItemId = item.id;
-          if (typeof productId !== "string" || typeof wishlistItemId !== "string") continue;
-          map.set(productId, wishlistItemId);
-          ids.add(productId);
-        }
-        setWishlistItemIdByProductId(map);
-        setWishlistIds(ids);
-      } catch {
-        // ignore
-      }
-      const message = err instanceof ApiError ? err.message : "Failed to update wishlist.";
-      toast({
-        title: "Wishlist update failed",
-        description: message,
-        variant: "error",
-        durationMs: 3400,
-      });
-    } finally {
-      setWishlistPendingIds((prev) => {
+      // if it exists, optimistic remove
+      setWishlistIds((prev) => {
         const next = new Set(prev);
         next.delete(productId);
         return next;
       });
+
+      const wishListId = wishlistItemsData?.data.find((item) => item.productId === productId);
+      if (!wishListId) {
+        return toast({ variant: "error", title: "You don't have this item in your wishlist" });
+      }
+
+      await wishlistService.deleteWishlistItem({ itemId: wishListId._id as string });
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
+      toast({ title: "Removed from wishlist", variant: "success" });
+    } catch (err) {
+      toast({ variant: "error", title: handleError(err) });
     }
   };
 
   const addToCart = async (productId: string) => {
-    const token = typeof window !== "undefined" ? sessionStorage.getItem("fb4u_token") : null;
     if (!token) {
-      window.location.href = "/login";
-      return;
+      return router.replace("/login");
     }
-    if (cartPendingIds.has(productId)) return;
-    setCartPendingIds((prev) => new Set(prev).add(productId));
+
+    setIsAdding(true);
+
     try {
+      setCartPendingIds((prev) => new Set(prev).add(productId));
       await cartService.addToCart({ productId, quantity: 1 });
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getCart] });
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to add to cart.";
-      toast({ variant: "error", title: message });
-    } finally {
       setCartPendingIds((prev) => {
         const next = new Set(prev);
         next.delete(productId);
         return next;
       });
+      toast({ variant: "error", title: handleError(err, "Failed to add to cart.") });
+    } finally {
+      setIsAdding(false);
     }
   };
+
+  useEffect(() => {
+    onLoadingChange?.(isProductsLoading);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProductsLoading]);
+
+  if (productsError) {
+    return (
+      <ErrorSection
+        message={handleError(productsError, "Something went wrong while fetching products.")}
+        onRetry={refetchProducts}
+      />
+    );
+  }
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-8">
       <div className="flex items-center justify-between mb-8 relative">
         <h2 className="text-xl md:text-2xl font-bold text-gray-800 inline-block relative z-10 pb-2">
           Special Offers
-          <div className="absolute bottom-0 left-0 w-1/2 h-[3px] bg-[#6cc200]" />
+          <div className="absolute bottom-0 left-0 w-1/2 h-0.75 bg-[#6cc200]" />
         </h2>
-        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gray-200" />
+        <div className="absolute bottom-0 left-0 w-full h-px bg-gray-200" />
         <Link
           href="/products"
           className="flex items-center gap-1 text-xs font-semibold text-[#6cc200] hover:text-[#5aad00] transition"
@@ -222,10 +165,10 @@ export default function SpecialOffers({
       </div>
 
       {/* Loading Skeleton (blur overlay handled globally on Home) */}
-      {isLoading && (
+      {isProductsLoading ? (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
           <div className="bg-white border border-gray-100 rounded-sm p-4 animate-pulse">
-            <div className="w-full h-[180px] bg-gray-100 rounded-md mb-4" />
+            <div className="w-full h-45 bg-gray-100 rounded-md mb-4" />
             <div className="h-4 bg-gray-100 rounded w-2/3 mb-2" />
             <div className="h-4 bg-gray-100 rounded w-1/3 mb-4" />
             <div className="h-3 bg-gray-100 rounded w-full mb-1" />
@@ -243,49 +186,35 @@ export default function SpecialOffers({
                 key={idx}
                 className="bg-white border border-gray-100 rounded-sm p-3 animate-pulse"
               >
-                <div className="w-full h-[140px] bg-gray-100 rounded mb-3" />
+                <div className="w-full h-35 bg-gray-100 rounded mb-3" />
                 <div className="h-3 bg-gray-100 rounded w-3/4 mb-2" />
                 <div className="h-3 bg-gray-100 rounded w-1/2" />
               </div>
             ))}
           </div>
         </div>
-      )}
-
-      {/* Error State */}
-      {error && !isLoading && (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <p className="text-red-500 text-sm">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="text-sm font-medium text-[#6cc200] hover:underline cursor-pointer"
-          >
-            Retry
-          </button>
+      ) : !productsData || productsData.length < 1 ? (
+        <div className="flex items-center justify-center py-20">
+          <p className="text-gray-400 text-sm">No products available at the moment.</p>
         </div>
-      )}
-
-      {/* Products Grid */}
-      {!isLoading && !error && products.length > 0 && (
+      ) : (
+        /* Products Grid */
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
           {/* Featured Product */}
           {featured && (
-            <Link
-              href={`/products/${featured._id}`}
-              className="bg-[#fcf8e3] rounded-sm p-4 flex flex-col border border-gray-100 shadow-sm relative overflow-hidden h-full hover:shadow-lg transition-shadow"
-            >
+            <div className="bg-[#fcf8e3] rounded-sm p-4 flex flex-col border border-gray-100 shadow-sm relative overflow-hidden h-full hover:shadow-lg transition-shadow">
               <div className="absolute top-4 left-4 z-20">
                 <span className="bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded-sm">
                   Special
                 </span>
               </div>
 
-              <div className="w-full h-[180px] relative rounded-md overflow-hidden bg-[#cde8b4] mb-4 z-10 flex items-center justify-center p-2">
+              <div className="w-full h-45 relative rounded-md overflow-hidden bg-[#cde8b4] mb-4 z-10 flex items-center justify-center p-2">
                 {featured.image?.startsWith("http") ? (
                   <img
                     src={featured.image}
                     alt={featured.name}
-                    className="size-[160px] object-contain"
+                    className="size-40 object-contain"
                     loading="lazy"
                   />
                 ) : (
@@ -314,31 +243,39 @@ export default function SpecialOffers({
                     e.stopPropagation();
                     addToWishlist(featured._id);
                   }}
-                  disabled={wishlistPendingIds.has(featured._id)}
                   aria-label="Add to wishlist"
                 >
                   <Heart
+                    fill={wishlistIds.has(featured._id) ? "#fb2c36" : ""}
                     className={`size-4 ${wishlistIds.has(featured._id) ? "text-red-500" : "text-[#6cc200]"}`}
                   />
                 </button>
                 <button
                   type="button"
-                  className="flex-1 flex items-center justify-center gap-2 bg-[#6cc200] text-white h-8 rounded-sm text-[10px] font-bold hover:bg-[#5aad00] transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="disabled:opacity-50 flex-1 flex items-center justify-center gap-2 bg-[#6cc200] text-white h-8 rounded-sm text-[10px] font-bold hover:bg-[#5aad00] transition cursor-pointer disabled:cursor-not-allowed"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     addToCart(featured._id);
                   }}
-                  disabled={cartPendingIds.has(featured._id) || !featured.isAvailable}
+                  disabled={cartPendingIds.has(featured._id) || !featured.isAvailable || isAdding}
                 >
                   <ShoppingCart className="size-3.5" />
-                  ADD TO CART
+                  {cartPendingIds.has(featured._id)
+                    ? "ALREADY IN YOUR CART"
+                    : isAdding
+                      ? "ADDING TO YOUR CART..."
+                      : "ADD TO CART"}
                 </button>
-                <button className="size-8 rounded-sm bg-[#f0f9e0] flex items-center justify-center hover:bg-[#e4f5cc] transition text-[#6cc200] cursor-pointer">
+
+                <Link
+                  href={`/products/${featured._id}`}
+                  className="size-8 rounded-sm bg-[#f0f9e0] flex items-center justify-center hover:bg-[#e4f5cc] transition text-[#6cc200] cursor-pointer"
+                >
                   <Eye className="size-4" />
-                </button>
+                </Link>
               </div>
-            </Link>
+            </div>
           )}
 
           {/* Product Grid */}
@@ -365,7 +302,7 @@ export default function SpecialOffers({
                   </div>
                 )}
 
-                <div className="relative w-full h-[140px] bg-white mb-2 flex items-center justify-center">
+                <div className="relative w-full h-35 bg-white mb-2 flex items-center justify-center">
                   {product.image?.startsWith("http") ? (
                     <img
                       src={product.image}
@@ -393,13 +330,6 @@ export default function SpecialOffers({
               </Link>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && !error && products.length === 0 && (
-        <div className="flex items-center justify-center py-20">
-          <p className="text-gray-400 text-sm">No products available at the moment.</p>
         </div>
       )}
     </section>

@@ -5,6 +5,9 @@ import type {
   AddToCartResponse,
   DeleteCartItemRequest,
   DeleteCartItemResponse,
+  UserFirstOrder,
+  ApplicableFees,
+  CreateOrderPayload,
 } from "@/types/cart";
 
 /**
@@ -50,7 +53,7 @@ export const cartService = {
    * Body: `{ itemId: string }`
    */
   deleteCartItem(data: DeleteCartItemRequest): Promise<DeleteCartItemResponse> {
-    return apiClient.del<DeleteCartItemResponse>("/v1/api/deleteCartItem", data);
+    return apiClient.del<DeleteCartItemResponse>("/deleteCartItem", data);
   },
 
   /**
@@ -67,5 +70,21 @@ export const cartService = {
     }).toString();
     // Send both query params and JSON body for compatibility with backend variants.
     return apiClient.post<AddToCartResponse>(`/addToCart?${qs}`, data);
+  },
+
+  async checkFirstOrder({ userId }: { userId: string }) {
+    return await apiClient.get<UserFirstOrder>(`/checkUserHasOrder/${userId}`);
+  },
+
+  async getOrderPrices(): Promise<{ allfees: ApplicableFees[] }> {
+    return await apiClient.get<{ allfees: ApplicableFees[] }>("/get-allFees");
+  },
+
+  async createOrder(payload: CreateOrderPayload) {
+    return await apiClient.post("/create-order", payload);
+  },
+
+  async outrightSubtractFromWalletById(payload: { amountPay: number }) {
+     return await apiClient.post("/OutrightSubtractFromWalletById", payload);
   },
 };

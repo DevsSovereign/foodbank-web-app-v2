@@ -66,7 +66,7 @@ export default function RootLoginForm() {
   };
 
   /** Handle form submission. */
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validate()) return;
 
@@ -119,7 +119,7 @@ export default function RootLoginForm() {
             htmlFor="login-identifier"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Email/Phone <span className="text-red-500">*</span>
+            Email <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -208,7 +208,7 @@ export default function RootLoginForm() {
         </button>
 
         {/* Google Sign-In */}
-        <button
+        {/* <button
           type="button"
           disabled={isLoading}
           className="w-full bg-white border border-gray-300 text-[#21a84f] font-semibold py-3 px-4 rounded-md hover:bg-gray-50 transition duration-150 ease-in-out mt-4 flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -221,7 +221,7 @@ export default function RootLoginForm() {
             className="size-6 object-contain"
           />
           <span>Sign-in with Google</span>
-        </button>
+        </button> */}
 
         {/* Remember me + Forgot password */}
         <div className="flex items-center justify-between mt-4">

@@ -1,13 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { Home, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import CategoryDropdown from "@/components/layout/CategoryDropdown";
 import { wishlistService } from "@/lib/services/wishlist.service";
 import type { WishlistItem } from "@/types/wishlist";
 import { toWishlistItem } from "@/types/wishlist";
@@ -18,36 +16,30 @@ import ErrorSection from "@/components/ui/ErrorSection";
 import { handleError } from "@/lib/handle-error";
 import { ApiError } from "@/types/api";
 import { useToast } from "@/components/ui/toast/ToastProvider";
+import { queryKeys, useGetCartItems, useGetWishlistItems } from "@/lib/queries";
+import { useQueryClient } from "@tanstack/react-query";
+import useCheckIfExist from "@/hooks/useCheckIfExist";
+import { CartItemDto } from "@/types/cart";
+import SubHeader from "@/components/sub-header";
 
 export default function WishlistPage() {
   const { toast } = useToast();
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [cartPendingIds, setCartPendingIds] = useState<Set<string>>(() => new Set());
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const {
+    data: wishlistItemsData,
+    error: wishlistItemsError,
+    isLoading: wishlistItemsLoading,
+    refetch: refetchWishlistItems,
+  } = useGetWishlistItems();
+  const { data: cartItemsResponse } = useGetCartItems();
+
+  const { itemIds: cartPendingIds, setItemIds: setCartPendingIds } = useCheckIfExist({
+    itemList: cartItemsResponse ? cartItemsResponse?.data : ([] as CartItemDto[]),
+  });
   const token = getAuthToken();
-
-  // ----- Fetch wishlist items from the API -----
-  const fetchWishlistItems = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await wishlistService.getWishlistItems();
-      const items = (response.data ?? []).map(toWishlistItem);
-      setWishlistItems(items);
-    } catch (err) {
-      setError(handleError(err, "Something went wrong while fetching your wishlist."));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!token) return;
-
-    fetchWishlistItems();
-  }, [token, fetchWishlistItems]);
 
   const removeItem = async (id: string) => {
     // Optimistic removal — instantly update the UI
@@ -56,140 +48,64 @@ export default function WishlistPage() {
 
     try {
       await wishlistService.deleteWishlistItem({ itemId: id });
-    } catch {
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getWishlist] });
+    } catch (error) {
       // Roll back on failure and notify the user
       setWishlistItems(previousItems);
-      toast({ variant: "error", title: "Failed to remove item. Please try again." });
+      toast({
+        variant: "error",
+        title: handleError(error, "Failed to remove item. Please try again."),
+      });
     }
   };
 
   const addToCart = async (productId: string) => {
-  const token =
-    typeof window !== "undefined" ? sessionStorage.getItem("fb4u_token") : null;
+    if (cartPendingIds.has(productId)) return;
 
-  if (!token) {
-    window.location.href = "/login";
-    return;
+    try {
+      await cartService.addToCart({
+        productId,
+        quantity: 1,
+      });
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getCart] });
+      setCartPendingIds((prev) => new Set(prev).add(productId));
+
+      toast({
+        variant: "success",
+        title: "Item added to cart.",
+      });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Failed to add to cart.";
+
+      toast({
+        variant: "error",
+        title: message,
+      });
+    } finally {
+      setCartPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(productId);
+        return next;
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!wishlistItemsData) return;
+
+    const items = (wishlistItemsData.data ?? []).map(toWishlistItem);
+    setWishlistItems(items);
+  }, [wishlistItemsData]);
+
+  if (wishlistItemsError) {
+    setError(handleError(wishlistItemsError, "Something went wrong while fetching your wishlist."));
   }
-
-  if (cartPendingIds.has(productId)) return;
-
-  setCartPendingIds((prev) => new Set(prev).add(productId));
-
-  try {
-    await cartService.addToCart({
-      productId,
-      quantity: 1,
-    });
-
-    toast({
-      variant: "success",
-      title: "Item added to cart.",
-    });
-  } catch (err) {
-    const message =
-      err instanceof ApiError ? err.message : "Failed to add to cart.";
-
-    toast({
-      variant: "error",
-      title: message,
-    });
-  } finally {
-    setCartPendingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(productId);
-      return next;
-    });
-  }
-};
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <TopRibbon />
       <Header />
-      <nav className="bg-[#f4faee] border-b border-gray-100 py-3 relative z-10 w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div className="text-sm font-medium flex items-center gap-2 shrink-0">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-gray-500 hover:text-[#6cc200] transition"
-            >
-              <Home className="size-4" />
-              <span>Home</span>
-            </Link>
-            <span className="text-gray-400">&gt;</span>
-            <span className="text-gray-800">Wish List</span>
-          </div>
-
-          <div className="hidden md:flex items-center gap-6">
-            <CategoryDropdown triggerStyle="pageNav" />
-
-            <Link
-              href="#"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              Track Order
-            </Link>
-
-            <Link
-              href="#"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-              </svg>
-              Customer Support
-            </Link>
-
-            <Link
-              href="#"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 16v-4" />
-                <path d="M12 8h.01" />
-              </svg>
-              Help Center
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <SubHeader currentLocationData={<span className="text-gray-800">Wish List</span>} />
 
       {/* ---------- Loading State ---------- */}
       {!token ? (
@@ -218,13 +134,13 @@ export default function WishlistPage() {
             </button>
           </div>
         </section>
-      ) : isLoading ? (
+      ) : wishlistItemsLoading ? (
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-24 flex flex-col items-center justify-center text-center">
           <Loader2 className="size-10 text-[#8cc629] animate-spin mb-4" />
           <p className="text-gray-500 text-sm">Loading your wishlist…</p>
         </main>
       ) : error ? (
-        <ErrorSection message={error} onRetry={fetchWishlistItems} />
+        <ErrorSection message={error} onRetry={refetchWishlistItems} />
       ) : (
         <main className="flex-1 w-full max-w-300 mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] rounded-sm min-h-125">
@@ -293,11 +209,11 @@ export default function WishlistPage() {
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-4">
                           <button
-                            className={`text-white text-[11px] font-bold px-5 py-2.5 rounded-sm uppercase flex items-center justify-center gap-2 transition-colors min-w-35 ${item.inStock ? "bg-[#8cc629] hover:bg-[#7db424]" : "bg-[#aeb8c6] cursor-not-allowed text-white"}`}
+                            className={`text-white disabled:opacity-50 text-[11px] font-bold px-5 py-2.5 rounded-sm uppercase flex items-center justify-center gap-2 transition-colors min-w-35 ${item.inStock ? "bg-[#8cc629] hover:bg-[#7db424]" : "bg-[#aeb8c6] cursor-not-allowed text-white"}`}
                             onClick={() => addToCart(item.productId)}
                             disabled={!item.inStock || cartPendingIds.has(item.productId)}
                           >
-                            ADD TO CART
+                            {cartPendingIds.has(item.productId) ? "ALREADY IN CART" : "ADD TO CART"}
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="14"

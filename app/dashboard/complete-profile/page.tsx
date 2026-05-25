@@ -1,52 +1,103 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { User, Mail, Phone, MapPin, Loader2, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { useUserStore } from "@/store/useUserStore";
+import { handleError } from "@/lib/handle-error";
+import { userService } from "@/lib/services/user.service";
+import { autocompletePlaces } from "@/functions/locationAutoComplete";
+import { useGetCustomer } from "@/lib/queries";
 
-/** Stored user shape from login response. */
-interface StoredUser {
-  id: string;
-  email: string;
-  phoneNumber: string;
-  isEmailVerified: boolean;
-}
+type PlaceSuggestion = {
+  placeId: string;
+  text: string;
+  secondaryText?: string;
+};
 
 export default function CompleteProfilePage() {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [error, setError] = useState("");
-
+  const { user, setUser } = useUserStore();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phoneNumber: "",
-    deliveryAddress: "",
+    firstName: user?.firstName ?? "",
+    lastName: user?.lastName ?? "",
+    email: user?.email ?? "",
+    phoneNumber: user?.phoneNumber ?? "",
+    deliveryAddress: user?.deliveryAddress ?? "",
   });
-
-  // Pre-populate from stored user data
-  useEffect(() => {
-    const stored = localStorage.getItem("fb4u_user");
-    if (stored) {
-      try {
-        const user: StoredUser = JSON.parse(stored);
-        setFormData((prev) => ({
-          ...prev,
-          email: user.email || "",
-          phoneNumber: user.phoneNumber || "",
-        }));
-      } catch {
-        // Ignore corrupt data
-      }
-    }
-  }, []);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [isSuggestOpen, setIsSuggestOpen] = useState<boolean>(false);
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState<boolean>(false);
+  const addressWrapperRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef<number>(0);
+  const { toast } = useToast();
+  const router = useRouter();
+  const { refetch: refetchUserProfile } = useGetCustomer();
 
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (error) setError("");
   };
+
+  const handleAddressChange = (value: string) => {
+    handleChange("deliveryAddress", value);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!value || value.trim().length < 2) {
+      setSuggestions([]);
+      setIsSuggestOpen(false);
+      setIsFetchingSuggestions(false);
+      return;
+    }
+
+    setIsFetchingSuggestions(true);
+    setIsSuggestOpen(true);
+
+    debounceRef.current = setTimeout(async () => {
+      const reqId = ++requestIdRef.current;
+      try {
+        const results = await autocompletePlaces({
+          input: value,
+          apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+        });
+        if (reqId !== requestIdRef.current) return;
+        setSuggestions(results);
+        setIsSuggestOpen(true);
+      } catch {
+        if (reqId !== requestIdRef.current) return;
+        setSuggestions([]);
+      } finally {
+        if (reqId === requestIdRef.current) setIsFetchingSuggestions(false);
+      }
+    }, 300);
+  };
+
+  const handleSelectSuggestion = (s: PlaceSuggestion) => {
+    const full = s.secondaryText ? `${s.text}, ${s.secondaryText}` : s.text;
+    handleChange("deliveryAddress", full);
+    setSuggestions([]);
+    setIsSuggestOpen(false);
+  };
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (addressWrapperRef.current && !addressWrapperRef.current.contains(e.target as Node)) {
+        setIsSuggestOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   /** Client-side validation. */
   const validate = (): string | null => {
@@ -60,39 +111,31 @@ export default function CompleteProfilePage() {
 
   const handleSubmit = async () => {
     const validationError = validate();
+
     if (validationError) {
-      setError(validationError);
-      return;
+      return setError(validationError);
     }
 
     setIsLoading(true);
-    setError("");
+
+    const payload = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      address: formData.deliveryAddress,
+      deliveryAddress: formData.deliveryAddress,
+      phoneNumber: formData.phoneNumber,
+    };
 
     try {
-      // TODO: Wire to profile-completion endpoint when provided
-      // await profileService.completeProfile(formData);
+      const res = await userService.updateProfile(payload);
+      const { data: userProfile } = await refetchUserProfile();
+      if (!userProfile) return;
 
-      // For now, update stored user with the new data
-      const stored = localStorage.getItem("fb4u_user");
-      if (stored) {
-        const user = JSON.parse(stored);
-        const updated = {
-          ...user,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          deliveryAddress: formData.deliveryAddress,
-          isComplete: "complete",
-        };
-        localStorage.setItem("fb4u_user", JSON.stringify(updated));
-      }
-
-      setSuccessMessage("Profile completed successfully!");
-
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1500);
-    } catch {
-      setError("Something went wrong. Please try again.");
+      setUser(userProfile.customer);
+      toast({ variant: "success", title: res.message || "Profile completed successfully!" });
+      router.replace("/dashboard");
+    } catch (error) {
+      handleError(error);
     } finally {
       setIsLoading(false);
     }
@@ -111,14 +154,7 @@ export default function CompleteProfilePage() {
         </div>
       )}
 
-      {/* Success banner */}
-      {successMessage && (
-        <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm font-medium">
-          {successMessage}
-        </div>
-      )}
-
-      <div className="bg-white border border-gray-100 rounded-[24px] p-6 md:p-10 shadow-sm mb-8">
+      <div className="bg-white border border-gray-100 rounded-3xl p-6 md:p-10 shadow-sm mb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
           {/* First Name */}
           <div className="space-y-2">
@@ -132,8 +168,7 @@ export default function CompleteProfilePage() {
                 value={formData.firstName}
                 onChange={(e) => handleChange("firstName", e.target.value)}
                 placeholder="Enter your first name"
-                disabled={isLoading}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-[12px] text-[15px] focus:outline-none focus:ring-1 focus:ring-[#8cc629] text-gray-600 disabled:opacity-60"
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-[15px] focus:outline-none focus:ring-1 focus:ring-[#8cc629] text-gray-600 disabled:opacity-60"
               />
             </div>
           </div>
@@ -149,8 +184,8 @@ export default function CompleteProfilePage() {
                 type="text"
                 value={formData.phoneNumber}
                 onChange={(e) => handleChange("phoneNumber", e.target.value)}
-                disabled={isLoading}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-[12px] text-[15px] focus:outline-none focus:ring-1 focus:ring-[#8cc629] text-gray-600 disabled:opacity-60"
+                readOnly
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-[15px] focus:outline-none focus:ring-1 focus:ring-[#8cc629] text-gray-600 disabled:opacity-60"
               />
             </div>
           </div>
@@ -167,8 +202,7 @@ export default function CompleteProfilePage() {
                 value={formData.lastName}
                 onChange={(e) => handleChange("lastName", e.target.value)}
                 placeholder="Enter your last name"
-                disabled={isLoading}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-[12px] text-[15px] focus:outline-none focus:ring-1 focus:ring-[#8cc629] text-gray-600 disabled:opacity-60"
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-[15px] focus:outline-none focus:ring-1 focus:ring-[#8cc629] text-gray-600 disabled:opacity-60"
               />
             </div>
           </div>
@@ -178,16 +212,58 @@ export default function CompleteProfilePage() {
             <label className="block text-[14px] font-medium text-gray-700">
               Delivery Address <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+            <div className="relative" ref={addressWrapperRef}>
+              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400 z-10" />
               <input
                 type="text"
                 value={formData.deliveryAddress}
-                onChange={(e) => handleChange("deliveryAddress", e.target.value)}
+                onChange={(e) => handleAddressChange(e.target.value)}
+                onFocus={() => {
+                  if (suggestions.length > 0) setIsSuggestOpen(true);
+                }}
+                autoComplete="off"
                 placeholder="Enter your delivery address"
-                disabled={isLoading}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-[12px] text-[15px] focus:outline-none focus:ring-1 focus:ring-[#8cc629] text-gray-600 disabled:opacity-60"
+                className="w-full pl-12 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-[15px] focus:outline-none focus:ring-1 focus:ring-[#8cc629] text-gray-600 disabled:opacity-60"
               />
+
+              {isFetchingSuggestions && (
+                <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-[#8cc629] animate-spin" />
+              )}
+
+              {isSuggestOpen && (suggestions.length > 0 || isFetchingSuggestions) && (
+                <div className="absolute left-0 right-0 top-full mt-2 z-20 bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden">
+                  {suggestions.length === 0 && isFetchingSuggestions ? (
+                    <div className="flex items-center gap-2 px-4 py-3 text-[14px] text-gray-500">
+                      <Loader2 className="size-4 animate-spin text-[#8cc629]" />
+                      Searching addresses...
+                    </div>
+                  ) : (
+                    <ul className="max-h-64 overflow-y-auto py-1">
+                      {suggestions.map((s) => (
+                        <li key={s.placeId}>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectSuggestion(s)}
+                            className="w-full flex items-start gap-3 text-left px-4 py-3 hover:bg-[#8cc629]/10 transition-colors group"
+                          >
+                            <MapPin className="size-4 text-gray-400 group-hover:text-[#8cc629] mt-0.5 shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[14px] font-medium text-gray-700 truncate">
+                                {s.text}
+                              </p>
+                              {s.secondaryText && (
+                                <p className="text-[12px] text-gray-500 truncate">
+                                  {s.secondaryText}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -202,7 +278,7 @@ export default function CompleteProfilePage() {
                 type="email"
                 value={formData.email}
                 readOnly
-                className="w-full pl-12 pr-12 py-3 bg-[#F3F4F6] border border-gray-100 rounded-[12px] text-[15px] focus:outline-none text-gray-600"
+                className="w-full pl-12 pr-12 py-3 bg-[#F3F4F6] border border-gray-100 rounded-xl text-[15px] focus:outline-none text-gray-600"
               />
               <CheckCircle2 className="absolute right-4 top-1/2 -translate-y-1/2 size-5 text-[#8cc629]" />
             </div>
@@ -214,7 +290,7 @@ export default function CompleteProfilePage() {
         <button
           onClick={handleSubmit}
           disabled={isLoading}
-          className="w-full max-w-[400px] bg-[#8cc629] hover:bg-[#7db424] text-white font-bold py-4 rounded-[12px] text-[18px] transition-all active:scale-[0.98] shadow-md uppercase tracking-wide flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full max-w-100 bg-[#8cc629] hover:bg-[#7db424] text-white font-bold py-4 rounded-xl text-[18px] transition-all active:scale-[0.98] shadow-md uppercase tracking-wide flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>

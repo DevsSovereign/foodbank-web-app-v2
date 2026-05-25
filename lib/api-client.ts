@@ -1,11 +1,10 @@
 import { ApiError } from "@/types/api";
+import { clearAuthToken, getAuthToken } from "./auth-utils";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 function handleUnauthorized() {
-  if (typeof window === "undefined") return;
-  sessionStorage.removeItem("fb4u_token");
-  document.cookie = "fb4u_token=; path=/; max-age=0; SameSite=Lax";
+  clearAuthToken();
   window.location.replace("/login");
 }
 
@@ -26,11 +25,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   };
 
   // Attach auth token if it exists (for protected endpoints later)
-  if (typeof window !== "undefined") {
-    const token = sessionStorage.getItem("fb4u_token");
-    if (token) {
-      (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
-    }
+
+  const token = getAuthToken();
+  if (token) {
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   }
 
   const res = await fetch(url, {

@@ -3,20 +3,23 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Share2, Gift, ArrowRight } from "lucide-react";
+import { Share2, Gift, ArrowRight, Check } from "lucide-react";
 import { useUserStore } from "@/store/useUserStore";
 import { formatCurrency } from "@/functions/formatCurrency";
+import EmptyState from "@/components/ui/EmptyState";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useGetUserTransactions } from "@/lib/queries";
+import LoaderSection from "@/components/ui/Loader";
 
 export default function VerifiedDashboardPage() {
   const [activeTab, setActiveTab] = useState("Wallet");
   const { user } = useUserStore();
+  const { copy, copied } = useCopyToClipboard();
+  const { data: transactions, isLoading: transactionsLoading } = useGetUserTransactions();
 
-  const transactions = Array(6).fill({
-    event: "Wallet Funded",
-    time: "02:37:33 AM",
-    date: "12/12/2025",
-    amount: "+ ₦ 2,000",
-  });
+  if (!user) {
+    return <EmptyState />;
+  }
 
   return (
     <div className="w-full max-w-5xl">
@@ -26,7 +29,10 @@ export default function VerifiedDashboardPage() {
 
           <div className="relative z-10">
             <div className="flex bg-white/20 rounded-lg p-1 mb-8 w-fit">
-              {["Wallet", "Credit Limit", "Loans"].map((tab) => (
+              {[
+                "Wallet",
+                // "Credit Limit", "Loans"
+              ].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -47,7 +53,9 @@ export default function VerifiedDashboardPage() {
                   {activeTab === "Loans" ? "Total amount owed today" : "Wallet Balance"}
                 </p>
                 <div className="flex items-center gap-2 mb-8">
-                  <h2 className="text-4xl font-bold tracking-tight">₦ 40,000</h2>
+                  <h2 className="text-4xl font-bold tracking-tight">
+                    {formatCurrency(user.virtualAccount.walletbalance)}
+                  </h2>
                   {activeTab === "Loans" && (
                     <div className="size-5 rounded-full bg-[#8cc629] flex items-center justify-center text-[10px] font-bold border border-white/30">
                       1/2
@@ -86,18 +94,24 @@ export default function VerifiedDashboardPage() {
           <div className="relative z-10">
             <p className="text-sm font-medium opacity-90 mb-1">Referral Earnings</p>
             <h2 className="text-4xl font-bold tracking-tight mb-8">
-              {formatCurrency(user?.referralBonusBalance ?? 0)}
+              {formatCurrency(user.referralBonusBalance)}
             </h2>
           </div>
 
           <div className="relative z-10 bg-white/10 rounded-xl p-4 border border-white/20">
             <div className="flex items-center gap-2 mb-4">
               <Gift size={18} className="opacity-80" />
-              <span className="text-sm font-medium">{user?.referredCustomers.length ?? 0} Total Referred</span>
+              <span className="text-sm font-medium">
+                {user.referredCustomers.length} Total Referred
+              </span>
             </div>
-            <button className="w-full bg-white hover:bg-gray-50 text-[#5a8bb3] px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
+            <button
+              onClick={() => copy(user.referralLink)}
+              className="w-full bg-white hover:bg-gray-50 text-[#5a8bb3] px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm flex flex-row items-center justify-center gap-2"
+            >
               <Share2 size={16} />
               Invite Friends
+              {copied && <Check className="size-3" />}
             </button>
           </div>
         </div>
@@ -106,60 +120,75 @@ export default function VerifiedDashboardPage() {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="flex justify-between items-center p-6 border-b border-gray-100">
           <h3 className="text-sm font-bold text-gray-800 tracking-wider">TRANSACTION HISTORY</h3>
-          <Link
-            href="#"
-            className="flex items-center gap-1 text-[#f27a22] text-sm font-medium hover:underline"
-          >
-            Next <ArrowRight size={16} />
-          </Link>
+          {transactions && transactions?.isNextPage && (
+            <Link
+              href="#"
+              className="flex items-center gap-1 text-[#f27a22] text-sm font-medium hover:underline"
+            >
+              Next <ArrowRight size={16} />
+            </Link>
+          )}
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 text-xs text-gray-500 font-medium">
-                <th className="px-6 py-4">EVENT</th>
-                <th className="px-6 py-4">TIME</th>
-                <th className="px-6 py-4">DATE</th>
-                <th className="px-6 py-4 text-right">AMOUNT</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {transactions.map((tx, index) => (
-                <tr key={index} className="hover:bg-gray-50/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="size-8 rounded-full bg-[#f0f7e6] flex items-center justify-center">
-                        <Image
-                          src="/assets/solar_circle-top-up-linear.png"
-                          alt="Top up"
-                          width={16}
-                          height={16}
-                        />
-                      </div>
-                      <span className="text-sm text-gray-700 font-medium">{tx.event}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{tx.time}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{tx.date}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-[#8cc629] text-right">
-                    {tx.amount}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="p-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-500">Showing 1 - 10 transactions of 1230 Transactions</p>
-          <div className="flex gap-2">
-            <button className="px-4 py-2 border border-gray-200 rounded-md text-xs font-medium text-gray-400 cursor-not-allowed">
-              Previous
-            </button>
-            <button className="px-4 py-2 border border-gray-200 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-              Next
-            </button>
-          </div>
+          {transactionsLoading ? (
+            <LoaderSection />
+          ) : !transactions || transactions.data.length < 1 ? (
+            <div className="w-full p-4">
+              <span className="font-medium">No transaction history</span>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 w-full">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50 text-xs text-gray-500 font-medium">
+                    <th className="px-6 py-4">EVENT</th>
+                    <th className="px-6 py-4">TIME</th>
+                    <th className="px-6 py-4">DATE</th>
+                    <th className="px-6 py-4 text-right">AMOUNT</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-gray-100">
+                  {transactions.data.map((tx) => (
+                    <tr key={tx._id} className="hover:bg-gray-50/30 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-8 rounded-full bg-[#f0f7e6] flex items-center justify-center">
+                            <Image
+                              src="/assets/solar_circle-top-up-linear.png"
+                              alt="Top up"
+                              width={16}
+                              height={16}
+                            />
+                          </div>
+                          <span className="text-sm text-gray-700 font-medium">{tx.status}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{tx.time}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{tx.date}</td>
+                      <td className="px-6 py-4 text-sm font-bold text-[#8cc629] text-right">
+                        {formatCurrency(tx.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {transactions?.isNextPage && (
+                <div className="p-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex gap-2">
+                    <button className="px-4 py-2 border border-gray-200 rounded-md text-xs font-medium text-gray-400 cursor-not-allowed">
+                      Previous
+                    </button>
+                    <button className="px-4 py-2 border border-gray-200 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,62 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Heart, User, ShoppingCart, Search, ClipboardList } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Heart, User, ShoppingCart, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { wishlistService } from "@/lib/services/wishlist.service";
-import { cartService } from "@/lib/services/cart.service";
+import { useRouter } from "next/navigation";
+import { getAuthToken } from "@/lib/auth-utils";
+import { useGetCartItems, useGetWishlistItems } from "@/lib/queries";
+import { useToast } from "../ui/toast/ToastProvider";
+import { handleError } from "@/lib/handle-error";
 
 export default function Header() {
-  const [isAuthenticated] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !!sessionStorage.getItem("fb4u_token");
-  });
-  const [query, setQuery] = useState("");
-  const [wishlistCount, setWishlistCount] = useState(0);
-  const [cartCount, setCartCount] = useState(0);
+  const [query, setQuery] = useState<string>("");
+  const { data: wishlistItems, error: wishlistItemsError } = useGetWishlistItems();
+  const { data: cartItems, error: cartItemsError } = useGetCartItems();
   const router = useRouter();
-  const pathname = usePathname();
+  const isAuthenticated = !!getAuthToken();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadCounts() {
-      if (!isAuthenticated) {
-        setWishlistCount(0);
-        setCartCount(0);
-        return;
-      }
-
-      try {
-        const [wishlist, cart] = await Promise.all([
-          wishlistService.getWishlistItems(),
-          cartService.getCartItems(),
-        ]);
-        if (cancelled) return;
-        setWishlistCount((wishlist.data ?? []).length);
-        setCartCount((cart.data ?? []).length);
-      } catch {
-        // Fail silently — counts should never block the header.
-        if (!cancelled) {
-          setWishlistCount(0);
-          setCartCount(0);
-        }
-      }
-    }
-
-    loadCounts();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, pathname]);
+  const wishlistCount = useMemo(() => wishlistItems?.data?.length ?? 0, [wishlistItems]);
+  const cartCount = useMemo(() => cartItems?.data?.length ?? 0, [cartItems]);
 
   const submitSearch = () => {
     const q = query.trim();
     if (!q) return;
     router.push(`/search?q=${encodeURIComponent(q)}`);
   };
+
+  if (cartItemsError) {
+    toast({ variant: "error", title: handleError(cartItemsError, "Failed to fetch cart items.") });
+  }
+  if (wishlistItemsError) {
+    toast({
+      variant: "error",
+      title: handleError(wishlistItemsError, "Failed to fetch wishlist items."),
+    });
+  }
 
   return (
     <header className="bg-white">
@@ -124,11 +103,11 @@ export default function Header() {
             </span>
           </Link>
 
-          <div className="w-px h-5 bg-gray-200" />
+          {/* <div className="w-px h-5 bg-gray-200" />
 
           <button className="hover:text-[#6cc200] transition">
             <ClipboardList className="size-5 text-[#6cc200]" />
-          </button>
+          </button> */}
         </div>
       </div>
     </header>

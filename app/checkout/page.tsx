@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, Suspense } from "react";
-import { Home, User, MapPin, Phone, CreditCard, ChevronRight, Loader2 } from "lucide-react";
+import { useState, Suspense } from "react";
+import { Home, User, MapPin, Phone, ChevronRight, Loader2, Edit } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -10,54 +10,77 @@ import EditCustomerModal from "../../components/checkout/EditCustomerModal";
 import AddPhoneNumberModal from "../../components/checkout/AddPhoneNumberModal";
 import DatePickerModal from "../../components/checkout/DatePickerModal";
 import CheckoutTotal from "@/components/ui/CheckoutTotal";
-
-const FALLBACK_ADDRESS = "";
+import { useUserStore } from "@/store/useUserStore";
+import { formatCurrency } from "@/functions/formatCurrency";
+import useUserLocation from "@/hooks/useUserLocation";
+import { useMutation } from "@tanstack/react-query";
+import { cartService } from "@/lib/services/cart.service";
+import { handleError } from "@/lib/handle-error";
+import { CreateOrderPayload } from "@/types/cart";
+import { useSearchParams } from "next/navigation";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { useGetCustomer } from "@/lib/queries";
+import { useRouter } from "next/navigation";
 
 export default function CheckoutPage() {
+  const { user, setUser } = useUserStore();
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
   const [purchaseOutright, setPurchaseOutright] = useState<boolean>(false);
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
   const [isAddPhoneModalOpen, setIsAddPhoneModalOpen] = useState<boolean>(false);
-  const [customerPhone, setCustomerPhone] = useState<string>("");
-  const [customerAddress, setCustomerAddress] = useState("Detecting your location…");
+  const [customerPhone, setCustomerPhone] = useState<string>(user?.phoneNumber ?? "");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
-  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<Date | null>(null);
+  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<Date>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  });
+  const { customerAddress, setCustomerAddress } = useUserLocation({ isDetectAddress: true });
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const { refetch: refetchUser } = useGetCustomer();
+  const router = useRouter();
 
-  useEffect(() => {
-    async function detectAddress(): Promise<string> {
-      if (!navigator.geolocation) return FALLBACK_ADDRESS;
+  const subtotal = Number(searchParams.get("sub") ?? 0);
+  const deliveryFee = Number(searchParams.get("del") ?? 0);
+  const serviceFee = Number(searchParams.get("svc") ?? 500);
 
-      return new Promise<string>((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-          async ({ coords }) => {
-            try {
-              const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json`,
-                { headers: { "Accept-Language": "en" } },
-              );
-              const data = await res.json();
-              const a = data.address ?? {};
-              const parts = [
-                a.house_number,
-                a.road,
-                a.suburb ?? a.neighbourhood ?? a.quarter,
-                a.city ?? a.town ?? a.village,
-                a.state,
-              ].filter(Boolean);
-              resolve(parts.length ? parts.join(", ") : FALLBACK_ADDRESS);
-            } catch {
-              resolve(FALLBACK_ADDRESS);
-            }
-          },
-          () => resolve(FALLBACK_ADDRESS),
-          { timeout: 8000 },
-        );
-      });
-    }
+  const amountPay = subtotal + deliveryFee + serviceFee;
 
-    detectAddress().then(setCustomerAddress);
-  }, []);
+  const { isPending: orderIsCreating, mutate } = useMutation({
+    mutationFn: cartService.createOrder,
+
+    onSuccess: async () => {
+      await cartService.outrightSubtractFromWalletById({ amountPay });
+      const { data: userProfile } = await refetchUser();
+      if (!userProfile) return;
+
+      setUser(userProfile.customer);
+      toast({ variant: "success", title: "Order Created Successfully" });
+      router.replace("/dashboard/order-history");
+    },
+
+    onError: (error) => {
+      const errMsg = handleError(error);
+      toast({ variant: "error", title: errMsg });
+    },
+  });
+
+  const handleCheckout = () => {
+    const payload: CreateOrderPayload = {
+      deliveryDetails: customerAddress,
+      deliveryFee,
+      serviceFee,
+      deliveryContact: customerPhone || (user?.phoneNumber as string),
+      deliveryDateOption: selectedDeliveryDate.toISOString(),
+      orderType: "outright",
+      topUpAmount: 0,
+      gamified: [],
+    };
+
+    return mutate(payload);
+  };
 
   return (
     <Suspense fallback={<Loader2 className="size-5 animate-spin" />}>
@@ -298,23 +321,32 @@ export default function CheckoutPage() {
                 onClick={() => setIsEditCustomerModalOpen(true)}
                 className="text-[#8cc629] text-[13px] font-medium flex items-center gap-1 hover:underline"
               >
-                Edit Customer Detail <ChevronRight className="w-4 h-4" />
+                Edit Customer Address <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-4 mb-6">
-              <div className="flex items-center gap-3">
-                <User className="text-[#8cc629] w-4.5 h-4.5" />
-                <span className="text-gray-700 text-sm">Peter Hassan</span>
-              </div>
+              {user && (
+                <div className="flex items-center gap-3">
+                  <User className="text-[#8cc629] w-4.5 h-4.5" />
+                  <span className="text-gray-700 text-sm">{`${user.firstName} ${user.lastName}`}</span>
+                </div>
+              )}
               <div className="flex items-start gap-3">
                 <MapPin className="text-[#8cc629] w-4.5 h-4.5 mt-0.5" />
                 <span className="text-gray-700 text-sm">{customerAddress}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="text-[#8cc629] w-4.5 h-4.5" />
-                {customerPhone ? (
-                  <span className="text-gray-700 text-sm font-medium">{customerPhone}</span>
+                {user?.phoneNumber ? (
+                  <div className="flex flex-row items-center gap-1">
+                    <span className="text-gray-700 text-sm font-medium">
+                      {customerPhone || user?.phoneNumber}
+                    </span>
+                    <button type="button" onClick={() => setIsAddPhoneModalOpen(true)}>
+                      <Edit className="w-4 h-4 text-[#8cc629]" />
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={() => setIsAddPhoneModalOpen(true)}
@@ -416,9 +448,9 @@ export default function CheckoutPage() {
                   <span
                     className={`text-2xl font-bold mb-1 ${paymentOption === "wallet" ? "text-[#8cc629]" : "text-gray-400"}`}
                   >
-                    ₦
+                    {formatCurrency(user?.virtualAccount?.walletbalance ?? 0)}
                   </span>
-                  <span className="text-[11px] font-medium text-gray-800 mb-2">₦ 500.00</span>
+
                   <span className="text-[12px] text-gray-800 mb-4 font-medium">Wallet Balance</span>
                   <div
                     className={`w-4.5 h-4.5 rounded-full flex items-center justify-center ${paymentOption === "wallet" ? "border-4 border-[#8cc629]" : "border border-gray-300"}`}
@@ -429,7 +461,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                <div
+                {/* <div
                   onClick={() => setPaymentOption("online")}
                   className={`flex-1 flex flex-col items-center justify-center cursor-pointer transition-colors ${paymentOption === "online" ? "bg-white" : "bg-gray-50"}`}
                 >
@@ -445,33 +477,45 @@ export default function CheckoutPage() {
                       <div className="w-1.5 h-1.5 rounded-full bg-[#8cc629]"></div>
                     )}
                   </div>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
 
-          <div className="bg-[#f0f9e1] rounded-lg p-5 px-6 flex justify-between items-center transition-opacity">
-            <span className="text-[#1e293b] text-[15px] font-bold">Purchase Outright</span>
-            <button
-              onClick={() => setPurchaseOutright((prev) => !prev)}
-              className={`w-11 h-6 rounded-full relative flex items-center p-1 transition-colors duration-300 ease-in-out ${purchaseOutright ? "bg-[#8cc629]" : "bg-gray-200"}`}
-            >
-              <span
-                className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${purchaseOutright ? "translate-x-5" : "translate-x-0"}`}
-              ></span>
-            </button>
-          </div>
+          {user?.accountType === "flexible" && (
+            <div className="bg-[#f0f9e1] rounded-lg p-5 px-6 flex justify-between items-center transition-opacity">
+              <span className="text-[#1e293b] text-[15px] font-bold">Purchase Outright</span>
+              <button
+                onClick={() => setPurchaseOutright((prev) => !prev)}
+                className={`w-11 h-6 rounded-full relative flex items-center p-1 transition-colors duration-300 ease-in-out ${purchaseOutright ? "bg-[#8cc629]" : "bg-gray-200"}`}
+              >
+                <span
+                  className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${purchaseOutright ? "translate-x-5" : "translate-x-0"}`}
+                ></span>
+              </button>
+            </div>
+          )}
 
-          <Link
-            href="/checkout/payment"
-            className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white py-4.5 rounded-md font-bold text-[13px] tracking-wider transition-colors mt-6 uppercase flex justify-center items-center"
+          <button
+            type="button"
+            disabled={orderIsCreating || !customerAddress || (!user?.phoneNumber && !customerPhone)}
+            onClick={handleCheckout}
+            className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white py-4.5 rounded-md font-bold text-[13px] tracking-wider transition-colors mt-6 uppercase flex justify-center items-center disabled:opacity-50"
           >
-            Confirm Checkout
-          </Link>
+            {orderIsCreating ? (
+              <>
+                <Loader2 className="size-5 animate-spin" />
+                Please wait...
+              </>
+            ) : (
+              "Confirm Checkout"
+            )}
+          </button>
         </main>
 
         <Footer />
 
+        {/* modals */}
         <EditCustomerModal
           isOpen={isEditCustomerModalOpen}
           onClose={() => setIsEditCustomerModalOpen(false)}

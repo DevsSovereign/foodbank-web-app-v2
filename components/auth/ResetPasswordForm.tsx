@@ -5,8 +5,8 @@ import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 
 export default function ResetPasswordForm() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
 
   return (
     <div className="w-full max-w-sm mx-auto flex flex-col items-center">
@@ -37,7 +37,7 @@ export default function ResetPasswordForm() {
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
+              onClick={() => setShowPassword((prev) => !prev)}
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
             >
               {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
@@ -64,7 +64,7 @@ export default function ResetPasswordForm() {
             />
             <button
               type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              onClick={() => setShowConfirmPassword((prev) => !prev)}
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
             >
               {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}

@@ -3,51 +3,68 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Home, Loader2, Search } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import CategoryDropdown from "@/components/layout/CategoryDropdown";
 import { cartService } from "@/lib/services/cart.service";
-import type { CartItem } from "@/types/cart";
+import type { ApplicableFees, CartItem } from "@/types/cart";
 import { toCartItem } from "@/types/cart";
 import { useRouter } from "next/navigation";
 import { getAuthToken } from "@/lib/auth-utils";
 import ErrorSection from "@/components/ui/ErrorSection";
 import { handleError } from "@/lib/handle-error";
 import { useToast } from "@/components/ui/toast/ToastProvider";
+import { queryKeys, useCheckFirstOrder, useGetAllFees, useGetCartItems } from "@/lib/queries";
+import { useQueryClient } from "@tanstack/react-query";
+import SubHeader from "@/components/sub-header";
+import useUserLocation from "@/hooks/useUserLocation";
+import { useUserStore } from "@/store/useUserStore";
+import LoaderSection from "@/components/ui/Loader";
 
 export default function CartPage() {
-  const { toast } = useToast();
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { user } = useUserStore();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isInstructionAgreed, setIsInstructionAgreed] = useState<boolean>(false);
   const router = useRouter();
   const token = getAuthToken();
+  const { toast } = useToast();
+  const {
+    data: cartItemsResponse,
+    isLoading: cartItemsLoading,
+    error: cartItemsError,
+    refetch: refetchCartItems,
+  } = useGetCartItems();
+  const { data: allFeesResponse, isLoading: allFeesLoading } = useGetAllFees();
+  const { data: firstOrder, isLoading: firstOrderLoading } = useCheckFirstOrder({
+    userId: user?._id ?? "",
+  });
+  const { customerState } = useUserLocation({ isDetectAddress: true });
+  const queryClient = useQueryClient();
 
-  // ----- Fetch cart items from the API -----
-  const fetchCartItems = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await cartService.getCartItems();
-      const items = (response.data ?? []).map(toCartItem);
-      setCartItems(items);
-    } catch (err) {
-      setError(handleError(err, "Something went wrong while fetching your cart."));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const locationFee = useMemo(() => {
+    return allFeesResponse?.allfees?.find((fee) => {
+      return customerState.toLowerCase().includes(fee.stateLocation.toLowerCase());
+    });
+  }, [allFeesResponse, customerState]);
 
-  useEffect(() => {
-    if (!token) return;
+  const applicableFee = useMemo(() => {
+    if (!locationFee) return {} as ApplicableFees;
 
-    fetchCartItems();
-  }, [token, fetchCartItems]);
+    if (!locationFee.isFreeDeliveryOnFirstOrder) return locationFee;
+
+    if (firstOrder && !firstOrder.hasOrderedBefore) return { ...locationFee, deliveryFee: 0 };
+
+    return locationFee;
+  }, [firstOrder, locationFee]);
+
+  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const deliveryCharge = applicableFee?.deliveryFee || 4000;
+  const serviceCharge = applicableFee?.serviceFee || 500; // default service charge;
+  const total = subtotal + deliveryCharge + serviceCharge;
+
+  const isEmpty = cartItems.length === 0;
 
   const updateQuantity = (id: string, delta: number) => {
     setCartItems((prev) =>
@@ -64,6 +81,7 @@ export default function CartPage() {
 
     try {
       await cartService.deleteCartItem({ itemId: id });
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getCart] });
     } catch {
       // Roll back on failure and notify the user
       setCartItems(previousItems);
@@ -71,196 +89,27 @@ export default function CartPage() {
     }
   };
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const deliveryCharge = 0;
-  const serviceCharge = 500;
-  const total = subtotal + deliveryCharge + serviceCharge;
+  const handleGoToCheckout = () => {
+    return router.push(`/checkout?sub=${subtotal}&del=${deliveryCharge}&svc=${serviceCharge}`);
+  };
 
-  const isEmpty = cartItems.length === 0;
+  useEffect(() => {
+    if (!cartItemsResponse) return;
+
+    const items = (cartItemsResponse.data ?? []).map(toCartItem);
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCartItems(items);
+  }, [cartItemsResponse]);
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      {/* ---------- Header ---------- */}
       <TopRibbon />
       <Header />
-
-      <nav className="bg-[#f4faee] border-b border-gray-100 py-3 relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div className="text-sm font-medium flex items-center gap-2 shrink-0">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-gray-500 hover:text-[#6cc200] transition"
-            >
-              <Home className="size-4" />
-              <span>Home</span>
-            </Link>
-            <span className="text-gray-400">&gt;</span>
-            <span className="text-gray-800">
-              Cart <span className="text-[#8cc629]">({cartItems.length})</span>
-            </span>
-          </div>
-
-          <button
-            className="md:hidden text-gray-600 p-1"
-            onClick={() => setMobileNavOpen((prev) => !prev)}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              {mobileNavOpen ? (
-                <path d="M18 6 6 18M6 6l12 12" />
-              ) : (
-                <path d="M4 12v0M4 6v0M4 18v0M8 12h12M8 6h12M8 18h12" />
-              )}
-            </svg>
-          </button>
-
-          <div className="hidden md:flex items-center gap-6">
-            <CategoryDropdown triggerStyle="pageNav" />
-
-            <Link
-              href="/dashboard/track-delivery"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              Track Order
-            </Link>
-
-            <Link
-              href="/dashboard/support"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-              </svg>
-              Customer Support
-            </Link>
-
-            <Link
-              href="/dashboard/help-center"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 16v-4" />
-                <path d="M12 8h.01" />
-              </svg>
-              Help Center
-            </Link>
-          </div>
-        </div>
-
-        {mobileNavOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100 absolute top-full left-0 right-0 shadow-sm px-4 py-3 pb-4 space-y-4">
-            <CategoryDropdown triggerStyle="pageNav" />
-
-            <Link
-              href="/dashboard/track-delivery"
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              Track Order
-            </Link>
-
-            <Link
-              href="/dashboard/support"
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-              </svg>
-              Customer Support
-            </Link>
-
-            <Link
-              href="/dashboard/help-center"
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 16v-4" />
-                <path d="M12 8h.01" />
-              </svg>
-              Help Center
-            </Link>
-          </div>
-        )}
-      </nav>
+      <SubHeader
+        currentLocationData={<span className="text-[#8cc629]">Cart ({cartItems.length})</span>}
+      />
 
       {/* ---------- Loading State ---------- */}
       {!token ? (
@@ -289,13 +138,13 @@ export default function CartPage() {
             </button>
           </div>
         </section>
-      ) : isLoading ? (
+      ) : cartItemsLoading ? (
         <section className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-24 flex flex-col items-center justify-center text-center">
           <Loader2 className="size-10 text-[#8cc629] animate-spin mb-4" />
           <p className="text-gray-500 text-sm">Loading your cart…</p>
         </section>
-      ) : error ? (
-        <ErrorSection message={error} onRetry={fetchCartItems} />
+      ) : cartItemsError ? (
+        <ErrorSection message={handleError(cartItemsError)} onRetry={refetchCartItems} />
       ) : isEmpty ? (
         <>
           <div className="w-full bg-white border-b border-gray-100 py-3 md:hidden">
@@ -384,6 +233,7 @@ export default function CartPage() {
                           <td className="px-6 py-6">
                             <div className="flex items-center gap-4">
                               <button
+                                title={`Remove ${item.name}`}
                                 onClick={() => removeItem(item.id)}
                                 className="text-gray-300 hover:text-red-500 transition-colors"
                               >
@@ -468,13 +318,10 @@ export default function CartPage() {
                 </div>
                 <div className="px-6 py-4 bg-white flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-100">
                   <button
-                    onClick={() => router.back()}
+                    onClick={() => router.push("products?page=0")}
                     className="text-[13px] font-bold text-[#8cc629] border border-[#8cc629] px-6 py-2.5 rounded-md hover:bg-[#f4faee] transition-colors w-full sm:w-auto uppercase tracking-wide"
                   >
                     Return to store
-                  </button>
-                  <button className="text-[13px] font-bold text-[#8cc629] border border-[#8cc629] px-6 py-2.5 rounded-md hover:bg-[#f4faee] transition-colors w-full sm:w-auto uppercase tracking-wide">
-                    Update Cart
                   </button>
                 </div>
               </div>
@@ -485,72 +332,138 @@ export default function CartPage() {
                 <div className="px-6 py-4 border-b border-gray-100">
                   <h3 className="text-xl font-bold text-gray-800">Cart Totals</h3>
                 </div>
-                <div className="p-6 space-y-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Sub total</span>
-                    <span className="font-bold text-gray-800">₦{subtotal.toLocaleString()}.00</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Delivery Charge</span>
-                    <span className="font-bold text-gray-800">
-                      ₦{deliveryCharge.toLocaleString()}.00
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Service Charge</span>
-                    <span className="font-bold text-gray-800">
-                      ₦{serviceCharge.toLocaleString()}.00
-                    </span>
-                  </div>
-                  <div className="pt-4 border-t border-gray-100 flex justify-between">
-                    <span className="font-bold text-gray-800">Total</span>
-                    <span className="text-xl font-bold text-gray-800">
-                      ₦{total.toLocaleString()}.00
-                    </span>
-                  </div>
 
-                  <div className="flex items-start gap-2 mt-6">
-                    <input
-                      checked={isInstructionAgreed}
-                      onChange={(e) => setIsInstructionAgreed(e.target.checked)}
-                      type="checkbox"
-                      id="terms"
-                      className="mt-1 accent-[#8cc629]"
-                    />
-                    <label htmlFor="terms" className="text-[12px] text-gray-500 leading-normal">
-                      I have read the instruction above and I agree to{" "}
-                      <Link href="/terms" className="text-gray-800 font-medium hover:underline">
-                        FoodBank&apos;s Refund & Return Policy
-                      </Link>
-                    </label>
-                  </div>
+                {firstOrderLoading || allFeesLoading ? (
+                  <LoaderSection />
+                ) : (
+                  <div className="p-6 space-y-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Sub total</span>
+                      <span className="font-bold text-gray-800">
+                        ₦{subtotal.toLocaleString()}.00
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Delivery Charge</span>
+                      <span className="font-bold text-gray-800">
+                        ₦{deliveryCharge.toLocaleString()}.00
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Service Charge</span>
+                      <span className="font-bold text-gray-800">
+                        ₦{serviceCharge.toLocaleString()}.00
+                      </span>
+                    </div>
+                    <div className="pt-4 border-t border-gray-100 flex justify-between">
+                      <span className="font-bold text-gray-800">Total</span>
+                      <span className="text-xl font-bold text-gray-800">
+                        ₦{total.toLocaleString()}.00
+                      </span>
+                    </div>
 
-                  <button
-                    onClick={() =>
-                      router.push(
-                        `/checkout?sub=${subtotal}&del=${deliveryCharge}&svc=${serviceCharge}`,
-                      )
-                    }
-                    disabled={!isInstructionAgreed}
-                    className="w-full bg-[#8cc629] disabled:opacity-60 text-white py-4 rounded-md font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#7db424] transition-colors mt-4 tracking-wide uppercase"
-                  >
-                    Proceed to Checkout
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M5 12h14" />
-                      <path d="m12 5 7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
+                    {user?.accountType === "flexible" ? (
+                      <div className="flex flex-col gap-4 w-full">
+                        <span className="font-medium text-sm text-gray-500">
+                          Your account is a flexible account. Please proceed to checkout on our
+                          mobile application
+                        </span>
+
+                        <div className="flex flex-wrap lg:flex-nowrap gap-3">
+                          <a
+                            href="https://apps.apple.com/ng/app/foodbankapp/id6608982689"
+                            target="_blank"
+                            className="flex items-center bg-[#2a2a2a] rounded-lg px-4 py-2.5 hover:bg-[#3a3a3a] transition cursor-pointer whitespace-nowrap"
+                          >
+                            <Image
+                              src="/assets/apple-negative-1.svg"
+                              alt="Apple logo"
+                              width={20}
+                              height={24}
+                              className="w-5 h-6 object-contain"
+                            />
+                            <div className="ml-2.5">
+                              <p className="text-[10px] text-gray-300 leading-tight">
+                                Download on the
+                              </p>
+                              <p className="text-sm font-semibold text-white leading-tight">
+                                App Store
+                              </p>
+                            </div>
+                          </a>
+
+                          <a
+                            href="https://play.google.com/store/apps/details?id=com.foodbank4u.app"
+                            target="_blank"
+                            className="flex items-center bg-[#2a2a2a] rounded-lg px-4 py-2.5 hover:bg-[#3a3a3a] transition cursor-pointer whitespace-nowrap"
+                          >
+                            <Image
+                              src="/assets/icon-google-play-1.svg"
+                              alt="Google Play logo"
+                              width={20}
+                              height={24}
+                              className="w-5 h-6 object-contain"
+                            />
+                            <div className="ml-2.5">
+                              <p className="text-[10px] text-gray-300 leading-tight">
+                                Download on the
+                              </p>
+                              <p className="text-sm font-semibold text-white leading-tight">
+                                Google play
+                              </p>
+                            </div>
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4 w-full">
+                        <div className="flex items-start gap-2">
+                          <input
+                            checked={isInstructionAgreed}
+                            onChange={(e) => setIsInstructionAgreed(e.target.checked)}
+                            type="checkbox"
+                            id="terms"
+                            className="mt-1 accent-[#8cc629]"
+                          />
+                          <label
+                            htmlFor="terms"
+                            className="text-[12px] text-gray-500 leading-normal"
+                          >
+                            I have read the instruction above and I agree to{" "}
+                            <Link
+                              href="/terms"
+                              className="text-gray-800 font-medium hover:underline"
+                            >
+                              FoodBank&apos;s Refund & Return Policy
+                            </Link>
+                          </label>
+                        </div>
+
+                        <button
+                          onClick={handleGoToCheckout}
+                          disabled={!isInstructionAgreed}
+                          className="w-full bg-[#8cc629] disabled:opacity-60 text-white py-4 rounded-md font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#7db424] transition-colors mt-4 tracking-wide uppercase"
+                        >
+                          Proceed to Checkout
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="bg-white border border-gray-100 rounded-sm shadow-sm overflow-hidden">

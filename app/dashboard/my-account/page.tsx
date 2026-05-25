@@ -7,7 +7,7 @@ export default function MyAccountPage() {
         <p className="text-gray-500 text-base mb-1">Good Morning, FoodBanker</p>
       </div>
 
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#5ba800] to-[#8cc629] p-10 md:p-14 text-white shadow-xl shadow-green-100/50 w-full">
+      <div className="relative overflow-hidden rounded-xl bg-linear-to-r from-[#5ba800] to-[#8cc629] p-10 md:p-14 text-white shadow-xl shadow-green-100/50 w-full">
         <div className="relative z-10 w-full">
           <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
             Unlock Your FoodBank Experience

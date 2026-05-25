@@ -18,7 +18,7 @@ export default function HelpCenterPage() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white border border-gray-100 rounded-[16px] p-8 shadow-sm">
+            <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
               <h2 className="text-[15px] font-semibold text-gray-800 mb-6 uppercase tracking-wide">
                 Help Centre
               </h2>
@@ -33,7 +33,7 @@ export default function HelpCenterPage() {
             </div>
 
             <button
-              className="w-full bg-white border border-gray-100 rounded-[16px] p-8 shadow-sm flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"
+              className="w-full bg-white border border-gray-100 rounded-2xl p-8 shadow-sm flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"
               onClick={() => setIsChatOpen(true)}
               type="button"
             >

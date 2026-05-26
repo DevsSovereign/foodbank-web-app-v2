@@ -17,12 +17,20 @@ import { useMutation } from "@tanstack/react-query";
 import { cartService } from "@/lib/services/cart.service";
 import { handleError } from "@/lib/handle-error";
 import { CreateOrderPayload } from "@/types/cart";
-import { useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import { useGetCustomer } from "@/lib/queries";
 import { useRouter } from "next/navigation";
+import useGetCheckoutTotal from "@/hooks/useGetCheckoutTotal";
 
 export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<Loader2 className="size-5 animate-spin" />}>
+      <CheckoutPageContent />
+    </Suspense>
+  );
+}
+
+function CheckoutPageContent() {
   const { user, setUser } = useUserStore();
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
@@ -37,16 +45,10 @@ export default function CheckoutPage() {
     return tomorrow;
   });
   const { customerAddress, setCustomerAddress } = useUserLocation({ isDetectAddress: true });
-  const searchParams = useSearchParams();
+  const { deliveryFee, serviceFee, amountPay } = useGetCheckoutTotal();
   const { toast } = useToast();
   const { refetch: refetchUser } = useGetCustomer();
   const router = useRouter();
-
-  const subtotal = Number(searchParams.get("sub") ?? 0);
-  const deliveryFee = Number(searchParams.get("del") ?? 0);
-  const serviceFee = Number(searchParams.get("svc") ?? 500);
-
-  const amountPay = subtotal + deliveryFee + serviceFee;
 
   const { isPending: orderIsCreating, mutate } = useMutation({
     mutationFn: cartService.createOrder,
@@ -83,10 +85,9 @@ export default function CheckoutPage() {
   };
 
   return (
-    <Suspense fallback={<Loader2 className="size-5 animate-spin" />}>
-      <div className="min-h-screen flex flex-col bg-[#fdfdfc]">
-        <TopRibbon />
-        <Header />
+    <div className="min-h-screen flex flex-col bg-[#fdfdfc]">
+      <TopRibbon />
+      <Header />
 
         <nav className="bg-white border-b border-gray-100 py-3 relative z-10">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
@@ -540,7 +541,6 @@ export default function CheckoutPage() {
           onSelectDate={setSelectedDeliveryDate}
           selectedDate={selectedDeliveryDate}
         />
-      </div>
-    </Suspense>
+    </div>
   );
 }

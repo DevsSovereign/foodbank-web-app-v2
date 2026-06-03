@@ -45,7 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   useEffect(() => {
-    if (user || !customerData) return;
+    if (!customerData) return;
 
     setUser(customerData.customer);
   }, [user, customerData, setUser]);

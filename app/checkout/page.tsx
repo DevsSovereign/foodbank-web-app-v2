@@ -475,7 +475,7 @@ function CheckoutPageContent() {
           </div>
         </div>
 
-        {user?.accountType === "flexible" && (
+        {/* {user?.accountType === "flexible" && (
           <div className="bg-[#f0f9e1] rounded-lg p-5 px-6 flex justify-between items-center transition-opacity">
             <span className="text-[#1e293b] text-[15px] font-bold">Purchase Outright</span>
             <button
@@ -487,23 +487,25 @@ function CheckoutPageContent() {
               ></span>
             </button>
           </div>
-        )}
+        )} */}
 
-        <button
-          type="button"
-          disabled={orderIsCreating || !customerAddress || (!user?.phoneNumber && !customerPhone)}
-          onClick={handleCheckout}
-          className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white py-4.5 rounded-md font-bold text-[13px] tracking-wider transition-colors mt-6 uppercase flex justify-center items-center disabled:opacity-50"
-        >
-          {orderIsCreating ? (
-            <>
-              <Loader2 className="size-5 animate-spin" />
-              Please wait...
-            </>
-          ) : (
-            "Confirm Checkout"
-          )}
-        </button>
+        {user?.accountType === "outright" && (
+          <button
+            type="button"
+            disabled={orderIsCreating || !customerAddress || (!user?.phoneNumber && !customerPhone)}
+            onClick={handleCheckout}
+            className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white py-4.5 rounded-md font-bold text-[13px] tracking-wider transition-colors mt-6 uppercase flex justify-center items-center disabled:opacity-50"
+          >
+            {orderIsCreating ? (
+              <>
+                <Loader2 className="size-5 animate-spin" />
+                Please wait...
+              </>
+            ) : (
+              "Confirm Checkout"
+            )}
+          </button>
+        )}
       </main>
 
       <Footer />

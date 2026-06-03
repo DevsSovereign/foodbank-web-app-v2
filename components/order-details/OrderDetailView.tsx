@@ -75,11 +75,13 @@ export default function OrderDetailView({ order, variant }: Props) {
   const accent = ACCENT[variant];
   const items = order?.orderItems ?? [];
   const discount = order?.discount ?? 0;
-  const total =
-    (order?.allItemsTotalPrice ?? 0) +
-    (order?.deliveryFee ?? 0) +
-    (order?.serviceFee ?? 0) -
-    discount;
+
+  const itemsTotal = items.reduce(
+    (accumulator, currentValue) => accumulator + currentValue.totalPrice,
+    0,
+  );
+
+  const total = itemsTotal + (order?.deliveryFee ?? 0) + (order?.serviceFee ?? 0) - discount;
 
   return (
     <div className="w-full bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -392,9 +394,7 @@ export default function OrderDetailView({ order, variant }: Props) {
             <div className="space-y-4 mb-8">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Item Total</span>
-                <span className="font-medium text-gray-900">
-                  {formatCurrency(order?.allItemsTotalPrice)}
-                </span>
+                <span className="font-medium text-gray-900">{formatCurrency(itemsTotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Delivery Charge</span>

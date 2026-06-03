@@ -26,6 +26,8 @@ function capitalizeWords(str: string): string {
     .join(" ");
 }
 
+const PAGE_SIZE = 8;
+
 function SearchPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -34,7 +36,6 @@ function SearchPageInner() {
   const typeParam = (searchParams.get("type") ?? "").trim();
   const pageParamRaw = (searchParams.get("page") ?? "1").trim();
   const pageParam = Number.isFinite(Number(pageParamRaw)) ? Math.max(1, Number(pageParamRaw)) : 1;
-  const PAGE_SIZE = 8;
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState(typeParam);
@@ -415,23 +416,11 @@ function SearchPageInner() {
 
           {/* Product Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 mb-10">
-            {/* Loading */}
-            {isProductsLoading && (
+            {isProductsLoading ? (
               <div className="col-span-full text-sm text-gray-500">Loading products…</div>
-            )}
-
-            {/* Error */}
-            {!isProductsLoading && productsError && (
-              <div className="col-span-full text-sm text-red-500">{productsError}</div>
-            )}
-
-            {/* Empty */}
-            {!isProductsLoading && !productsError && filteredProducts.length === 0 && (
+            ) : pagedProducts.length < 1 ? (
               <div className="col-span-full text-sm text-gray-500">No products found.</div>
-            )}
-
-            {!isProductsLoading &&
-              !productsError &&
+            ) : (
               pagedProducts.map((product) => (
                 <Link
                   href={`/products/${product._id}`}
@@ -493,7 +482,8 @@ function SearchPageInner() {
                     </div>
                   </div>
                 </Link>
-              ))}
+              ))
+            )}
           </div>
 
           {/* Pagination */}

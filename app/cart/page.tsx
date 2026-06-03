@@ -466,21 +466,23 @@ export default function CartPage() {
                 )}
               </div>
 
-              <div className="bg-white border border-gray-100 rounded-sm shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-bold text-gray-800">Coupon Code</h3>
+              {/* {user?.accountType === "outright" && (
+                <div className="bg-white border border-gray-100 rounded-sm shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800">Coupon Code</h3>
+                  </div>
+                  <div className="p-6">
+                    <input
+                      type="text"
+                      placeholder="enter your coupon code"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-md text-sm mb-4 focus:outline-none focus:border-[#8cc629]"
+                    />
+                    <button className="w-full bg-[#8cc629] text-white py-3 rounded-md font-bold text-sm hover:bg-[#7db424] transition-colors tracking-wide uppercase">
+                      Apply Coupon
+                    </button>
+                  </div>
                 </div>
-                <div className="p-6">
-                  <input
-                    type="text"
-                    placeholder="enter your coupon code"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-md text-sm mb-4 focus:outline-none focus:border-[#8cc629]"
-                  />
-                  <button className="w-full bg-[#8cc629] text-white py-3 rounded-md font-bold text-sm hover:bg-[#7db424] transition-colors tracking-wide uppercase">
-                    Apply Coupon
-                  </button>
-                </div>
-              </div>
+              )} */}
             </div>
           </div>
         </section>

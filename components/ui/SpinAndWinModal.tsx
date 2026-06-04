@@ -18,12 +18,12 @@ export default function SpinAndWinModal({ isOpen, onClose }: SpinAndWinModalProp
 
   // Reset state when modal opens
   useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setModalState("unlocked");
-      setRotation(0);
-      setIsAnimating(false);
-    }
+    if (!isOpen) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setModalState("unlocked");
+    setRotation(0);
+    setIsAnimating(false);
   }, [isOpen]);
 
   const handleSpin = () => {

@@ -12,7 +12,7 @@ export default function DashboardPage() {
   const displayName = user?.firstName || user?.email?.split("@")[0] || "User";
 
   // If the user is fully verified and email-verified → show the verified dashboard
-  if (user?.isEmailVerified && user?.isComplete !== "none") {
+  if (user?.isEmailVerified || user?.isComplete !== "none") {
     return <VerifiedDashboard />;
   }
 

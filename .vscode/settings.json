@@ -1,0 +1,5 @@
+{
+  // Tailwind CSS IntelliSense: stop suggesting canonical class rewrites
+  // (e.g. "max-w-[440px] can be written as max-w-110").
+  "tailwindCSS.lint.suggestCanonicalClasses": "ignore"
+}

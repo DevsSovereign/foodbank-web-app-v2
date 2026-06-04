@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Share2, Gift, ArrowRight, Check } from "lucide-react";
 import { useUserStore } from "@/store/useUserStore";
 import { formatCurrency } from "@/functions/formatCurrency";
@@ -16,6 +17,7 @@ export default function VerifiedDashboardPage() {
   const { user } = useUserStore();
   const { copy, copied } = useCopyToClipboard();
   const { data: transactions, isLoading: transactionsLoading } = useGetUserTransactions();
+  const router = useRouter();
 
   if (!user) {
     return <EmptyState />;
@@ -70,10 +72,19 @@ export default function VerifiedDashboardPage() {
                 )}
 
                 <div className="flex gap-4">
-                  <button className="bg-[#8cc629] hover:bg-[#7db424] text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm">
+                  <button
+                    onClick={() => router.push("/dashboard/fund-wallet")}
+                    className="bg-[#8cc629] hover:bg-[#7db424] text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
+                  >
                     Fund wallet
                   </button>
-                  <button className="bg-white hover:bg-gray-50 text-[#8cc629] px-6 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm">
+                  <button
+                    onClick={() => {
+                      if (activeTab === "Loans") return;
+                      router.push("/cart");
+                    }}
+                    className="bg-white hover:bg-gray-50 text-[#8cc629] px-6 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
+                  >
                     {activeTab === "Loans" ? "Apply Now" : "Order Now"}
                   </button>
                 </div>

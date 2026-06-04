@@ -63,9 +63,9 @@ export default function HomePage() {
 
       <Footer />
 
-      {/* <SpinAndWinModal isOpen={isSpinModalOpen} onClose={() => setIsSpinModalOpen(false)} /> */}
+      <SpinAndWinModal isOpen={isSpinModalOpen} onClose={() => setIsSpinModalOpen(false)} />
 
-      {/* <FreeDeliveryModal
+      <FreeDeliveryModal
         isOpen={isFreeDeliveryOpen}
         onClose={() => {
           setIsFreeDeliveryOpen(false);
@@ -74,7 +74,7 @@ export default function HomePage() {
             setIsSpinModalOpen(true);
           }, 500);
         }}
-      /> */}
+      />
     </div>
   );
 }

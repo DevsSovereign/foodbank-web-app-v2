@@ -48,8 +48,8 @@ export const userService = {
     );
   },
 
-  async getNotifications(): Promise<UserNotificationsResponse[]> {
-    return await apiClient.get<UserNotificationsResponse[]>(`/getCustomerNotifications`);
+  async getNotifications(): Promise<UserNotificationsResponse> {
+    return await apiClient.get<UserNotificationsResponse>(`/getCustomerNotifications`);
   },
 
   async getFAQs(): Promise<{ faqs: [] }> {

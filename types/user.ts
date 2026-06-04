@@ -193,10 +193,13 @@ export interface NotificationMessage {
   _id: string;
 }
 
-export interface UserNotificationsResponse {
+export interface NotificationItem {
   timeAgo: string;
   message: NotificationMessage;
 }
+
+// Notifications are returned grouped by date string keys (e.g. "Fri Feb 27 2026")
+export type UserNotificationsResponse = Record<string, NotificationItem[]>;
 
 export interface UpdateProfilePayload {
   firstName: string;

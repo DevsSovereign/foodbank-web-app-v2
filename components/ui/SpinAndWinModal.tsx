@@ -58,16 +58,16 @@ export default function SpinAndWinModal({ isOpen, onClose }: SpinAndWinModalProp
 
         {modalState === "unlocked" && (
           <>
-            <div className="mb-2">
+            <div className="mb-1">
               <span className="text-[36px]">🎉</span>
             </div>
             <h2 className="text-[26px] md:text-[30px] font-extrabold text-white mb-1 leading-tight tracking-tight">
               Congratulations!
             </h2>
-            <h3 className="text-[18px] md:text-[22px] font-bold text-white mb-4 tracking-tight">
+            <h3 className="text-[18px] md:text-[22px] font-bold text-white mb-2 tracking-tight">
               You&apos;ve unlocked a Spin & Win!
             </h3>
-            <p className="text-white/90 text-[13px] md:text-[14px] mb-10 max-w-[340px] leading-relaxed italic mx-auto">
+            <p className="text-white/90 text-[13px] md:text-[14px] mb-5 max-w-[340px] leading-relaxed italic mx-auto">
               As a thank you for your purchase, spin the wheel
               <br />
               for a chance to win a gift on your last order.
@@ -77,30 +77,30 @@ export default function SpinAndWinModal({ isOpen, onClose }: SpinAndWinModalProp
 
         {modalState === "spinning" && (
           <>
-            <div className="mb-4">
+            <div className="mb-2">
               <span className="text-[32px]">🔥</span>
             </div>
             <h2 className="text-[26px] md:text-[32px] font-bold text-white mb-2">Spinning...</h2>
-            <p className="text-white/80 text-[15px] mb-8">Hold tight! Your luck is in motion...</p>
+            <p className="text-white/80 text-[15px] mb-4">Hold tight! Your luck is in motion...</p>
           </>
         )}
 
         {modalState === "won" && (
           <>
-            <div className="mb-4">
+            <div className="mb-2">
               <span className="text-[36px]">🎊</span>
             </div>
-            <h2 className="text-[26px] md:text-[32px] font-bold text-white mb-2">
+            <h2 className="text-[26px] md:text-[32px] font-bold text-white mb-1">
               Congratulations!
             </h2>
-            <p className="text-[22px] md:text-[26px] font-bold text-[#a4e644] mb-8 uppercase tracking-wider drop-shadow-sm">
+            <p className="text-[22px] md:text-[26px] font-bold text-[#a4e644] mb-5 uppercase tracking-wider drop-shadow-sm">
               You&apos;ve won a Free Face Cap
             </p>
           </>
         )}
 
         {/* The Wheel/Prize Reveal Area */}
-        <div className="relative size-[300px] md:w-[340px] md:h-[340px] mb-10 flex items-center justify-center">
+        <div className="relative size-[300px] md:w-[340px] md:h-[340px] mb-6 flex items-center justify-center">
           {modalState !== "won" ? (
             <div
               className="relative size-full transition-transform duration-[3000ms] cubic-bezier(0.4, 0, 0.2, 1)"

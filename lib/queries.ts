@@ -24,6 +24,8 @@ export const queryKeys = {
   allFees: "allFees",
   accountOfficer: "accountOfficer",
   transactions: "transactions",
+  gamification: "gamification",
+  spinItems: "spinItems",
 };
 
 // queries
@@ -191,6 +193,31 @@ export const useGetUserTransactions = () => {
     queryKey: [queryKeys.transactions],
     queryFn: async () => {
       return await userService.getUserTransactions();
+    },
+  });
+
+  return queryResult;
+};
+
+export const useGetUserGamification = () => {
+  const token = getAuthToken();
+
+  const queryResult = useQuery({
+    queryKey: [queryKeys.gamification],
+    queryFn: async () => {
+      return await userService.getGamificationState();
+    },
+    enabled: !!token,
+  });
+
+  return queryResult;
+};
+
+export const useGetSpinItems = () => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.spinItems],
+    queryFn: async () => {
+      return await userService.getSpinItems();
     },
   });
 

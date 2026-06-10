@@ -8,6 +8,8 @@ import {
   UserNotificationsResponse,
   UpdateProfilePayload,
   TransactionHistoryResponse,
+  UserGamification,
+  SpinItems,
 } from "@/types/user";
 import { apiClient } from "../api-client";
 
@@ -71,5 +73,25 @@ export const userService = {
     return await apiClient.get<TransactionHistoryResponse>(
       `/users/transaction-history/transactions?limit=5`,
     );
+  },
+
+  async getGamificationState() {
+    const res = await apiClient.get<{ data: UserGamification }>("/user/gamification/state");
+    return res.data;
+  },
+
+  async getSpinItems() {
+    const res = await apiClient.get<{ data: { items: SpinItems[] } }>(
+      "/user/gamification/discounts",
+    );
+    return res.data.items[0];
+  },
+
+  async validatePromoCode({ promoCode, orderAmount }: { promoCode: string; orderAmount: number }) {
+    const res = await apiClient.post<{ data: UserGamification }>(
+      "/user/gamification/promo-code/validate",
+      { promoCode, orderAmount },
+    );
+    return res.data;
   },
 };

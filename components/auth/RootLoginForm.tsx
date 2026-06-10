@@ -6,11 +6,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authService } from "@/lib/services/auth.service";
-import { ApiError } from "@/types/api";
 import { userService } from "@/lib/services/user.service";
 import { setAuthToken } from "@/lib/auth-utils";
 import { useUserStore } from "@/store/useUserStore";
-import ErrorSection from "../ui/ErrorSection";
+import { useToast } from "../ui/toast/ToastProvider";
+import { handleError } from "@/lib/handle-error";
 
 const REMEMBER_KEY = "fb4u_remember_identifier";
 
@@ -28,6 +28,8 @@ export default function RootLoginForm() {
 
   // — Validation ————————————————————————————————
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const { toast } = useToast();
 
   // store
   const { setUser } = useUserStore();
@@ -95,11 +97,8 @@ export default function RootLoginForm() {
       // Redirect to homepage
       router.push("/");
     } catch (err) {
-      if (err instanceof ApiError) {
-        setErrors({ api: err.message });
-      } else {
-        setErrors({ api: "Something went wrong. Please try again." });
-      }
+      const errorMsg = handleError(err);
+      toast({ variant: "error", title: errorMsg });
     } finally {
       setIsLoading(false);
     }
@@ -108,9 +107,6 @@ export default function RootLoginForm() {
   return (
     <div className="w-full max-w-md">
       <h2 className="text-2xl font-bold mb-8 text-gray-800">LOGIN</h2>
-
-      {/* API-level error banner */}
-      {errors.api && <ErrorSection message={errors.api} />}
 
       <form className="space-y-6" onSubmit={handleSubmit} autoComplete="on">
         {/* Email / Phone */}

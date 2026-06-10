@@ -5,22 +5,22 @@ import Image from "next/image";
 import { XCircle } from "lucide-react";
 
 interface FreeDeliveryModalProps {
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
 }
 
-export default function FreeDeliveryModal({ isOpen, onClose }: FreeDeliveryModalProps) {
-  const [show, setShow] = useState(false);
-  const [isClaimed, setIsClaimed] = useState(false);
+export default function FreeDeliveryModal({ open, onClose }: FreeDeliveryModalProps) {
+  const [show, setShow] = useState<boolean>(false);
+  const [isClaimed, setIsClaimed] = useState<boolean>(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setShow(true);
     } else {
       setTimeout(() => setShow(false), 300); // fade out duration
     }
-  }, [isOpen]);
+  }, [open]);
 
   const handleClaim = () => {
     setIsClaimed(true);
@@ -31,11 +31,11 @@ export default function FreeDeliveryModal({ isOpen, onClose }: FreeDeliveryModal
     }, 1500); // 1500ms for an even smoother, slower zoom-off
   };
 
-  if (!isOpen && !show) return null;
+  if (!open && !show) return null;
 
   return (
     <div
-      className={`fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 overflow-y-auto overflow-x-hidden transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0"}`}
+      className={`fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 overflow-y-auto overflow-x-hidden transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
     >
       <div className="relative p-6 md:p-8 max-w-[440px] w-full flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-500 my-4">
         {/* Close Button placed above heading */}

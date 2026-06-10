@@ -26,7 +26,6 @@ function CheckoutPageContent() {
   const { user, setUser } = useUserStore();
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
-  const [purchaseOutright, setPurchaseOutright] = useState<boolean>(false);
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
   const [isAddPhoneModalOpen, setIsAddPhoneModalOpen] = useState<boolean>(false);
   const [customerPhone, setCustomerPhone] = useState<string>(user?.phoneNumber ?? "");

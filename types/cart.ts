@@ -1,5 +1,5 @@
 import type { ApiResponse } from "./api";
-import { UserResponse } from "./user";
+import { GamificationRewardType, UserResponse } from "./user";
 
 // ---------------------------------------------------------------------------
 // Cart Item — shape returned by GET /getCartItems
@@ -130,7 +130,7 @@ export interface CreateOrderPayload {
   topUpAmount: number;
   gamified: {
     rewardId: string;
-    rewardType: string;
+    rewardType: GamificationRewardType;
   }[];
 }
 

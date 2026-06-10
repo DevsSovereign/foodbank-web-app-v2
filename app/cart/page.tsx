@@ -17,15 +17,17 @@ import ErrorSection from "@/components/ui/ErrorSection";
 import { handleError } from "@/lib/handle-error";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import { queryKeys, useCheckFirstOrder, useGetAllFees, useGetCartItems } from "@/lib/queries";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import SubHeader from "@/components/sub-header";
 import useUserLocation from "@/hooks/useUserLocation";
 import { useUserStore } from "@/store/useUserStore";
 import LoaderSection from "@/components/ui/Loader";
+import { userService } from "@/lib/services/user.service";
 
 export default function CartPage() {
-  const { user } = useUserStore();
+  const { user, userEligibles } = useUserStore();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [couponCode, setCouponCode] = useState<string>("");
   const [isInstructionAgreed, setIsInstructionAgreed] = useState<boolean>(false);
   const router = useRouter();
   const token = getAuthToken();
@@ -92,6 +94,17 @@ export default function CartPage() {
   const handleGoToCheckout = () => {
     return router.push(`/checkout?sub=${subtotal}&del=${deliveryCharge}&svc=${serviceCharge}`);
   };
+
+  const { isPending, mutate } = useMutation({
+    mutationFn: userService.validatePromoCode,
+    onSuccess: (data) => {
+      console.log(data);
+    },
+    onError: (error) => {
+      const errMsg = handleError(error);
+      toast({ variant: "error", title: errMsg });
+    },
+  });
 
   useEffect(() => {
     if (!cartItemsResponse) return;
@@ -466,23 +479,36 @@ export default function CartPage() {
                 )}
               </div>
 
-              {/* {user?.accountType === "outright" && (
+              {user?.accountType === "outright" && userEligibles?.promoCode?.eligible && (
                 <div className="bg-white border border-gray-100 rounded-sm shadow-sm overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800">Coupon Code</h3>
                   </div>
-                  <div className="p-6">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!couponCode) return;
+                      mutate({ promoCode: couponCode, orderAmount: total });
+                    }}
+                    className="p-6"
+                  >
                     <input
                       type="text"
-                      placeholder="enter your coupon code"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      placeholder="Enter your coupon code"
                       className="w-full px-4 py-3 border border-gray-200 rounded-md text-sm mb-4 focus:outline-none focus:border-[#8cc629]"
                     />
-                    <button className="w-full bg-[#8cc629] text-white py-3 rounded-md font-bold text-sm hover:bg-[#7db424] transition-colors tracking-wide uppercase">
-                      Apply Coupon
+                    <button
+                      type="submit"
+                      disabled={isPending}
+                      className="w-full bg-[#8cc629] text-white py-3 rounded-md font-bold text-sm hover:bg-[#7db424] transition-colors tracking-wide uppercase disabled:opacity-60"
+                    >
+                      {isPending ? "Please wait..." : "Apply Coupon"}
                     </button>
-                  </div>
+                  </form>
                 </div>
-              )} */}
+              )}
             </div>
           </div>
         </section>

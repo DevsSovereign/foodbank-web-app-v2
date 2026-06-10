@@ -15,7 +15,8 @@ export function getAuthToken(): string | null {
 
 export function clearAuthToken() {
   if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(TOKEN_KEY);
+  // window.sessionStorage.removeItem(TOKEN_KEY);
+  window.sessionStorage.clear();
 
   /** for proxy.ts and protected route */
   document.cookie = `${TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;

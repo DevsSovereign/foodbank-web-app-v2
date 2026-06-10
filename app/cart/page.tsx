@@ -482,7 +482,7 @@ export default function CartPage() {
               {user?.accountType === "outright" && userEligibles?.promoCode?.eligible && (
                 <div className="bg-white border border-gray-100 rounded-sm shadow-sm overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800">Coupon Code</h3>
+                    <h3 className="text-lg font-bold text-gray-800">Promo Code</h3>
                   </div>
                   <form
                     onSubmit={(e) => {
@@ -504,7 +504,7 @@ export default function CartPage() {
                       disabled={isPending}
                       className="w-full bg-[#8cc629] text-white py-3 rounded-md font-bold text-sm hover:bg-[#7db424] transition-colors tracking-wide uppercase disabled:opacity-60"
                     >
-                      {isPending ? "Please wait..." : "Apply Coupon"}
+                      {isPending ? "Please wait..." : "Apply Code"}
                     </button>
                   </form>
                 </div>

@@ -16,6 +16,11 @@ interface SpinAndWinModalProps {
   onClaim: () => void;
 }
 
+const getAlreadySpinned = () => {
+  if (typeof window === "undefined") return;
+  return sessionStorage.getItem("fb-spinned-item");
+};
+
 export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinModalProps) {
   const [modalState, setModalState] = useState<ModalState>("unlocked");
   const [rotation, setRotation] = useState<number>(0);
@@ -29,6 +34,8 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
   const segmentCount = items.length;
   const segmentAngle = segmentCount > 0 ? 360 / segmentCount : 0;
   const wonItem = winnerIndex != null ? items[winnerIndex]?.scopeId : undefined;
+
+  const isAlreadySpinned = !!getAlreadySpinned();
 
   const formatPrize = (scope: string, value: number) => {
     return scope === "Fixed Amount" ? `₦${value.toLocaleString()} Off` : `${value}% Off`;
@@ -75,7 +82,7 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
     setWinnerIndex(null);
   }, [open]);
 
-  if (!open) return null;
+  if (!open || isAlreadySpinned) return null;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 overflow-y-auto">

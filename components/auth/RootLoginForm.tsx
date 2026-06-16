@@ -7,12 +7,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authService } from "@/lib/services/auth.service";
 import { userService } from "@/lib/services/user.service";
-import { setAuthToken } from "@/lib/auth-utils";
+import { setAuthToken, STORAGE_KEYS } from "@/lib/auth-utils";
 import { useUserStore } from "@/store/useUserStore";
 import { useToast } from "../ui/toast/ToastProvider";
 import { handleError } from "@/lib/handle-error";
-
-const REMEMBER_KEY = "fb4u_remember_identifier";
 
 export default function RootLoginForm() {
   const router = useRouter();
@@ -36,7 +34,7 @@ export default function RootLoginForm() {
 
   // — Restore saved identifier on mount ————————
   useEffect(() => {
-    const saved = localStorage.getItem(REMEMBER_KEY);
+    const saved = localStorage.getItem(STORAGE_KEYS.REMEMBER_IDENTIFIER);
     if (saved) {
       setIdentifier(saved);
       setRememberMe(true);
@@ -86,9 +84,9 @@ export default function RootLoginForm() {
 
       // Persist or clear the "remember me" identifier
       if (rememberMe) {
-        localStorage.setItem(REMEMBER_KEY, identifier.trim());
+        localStorage.setItem(STORAGE_KEYS.REMEMBER_IDENTIFIER, identifier.trim());
       } else {
-        localStorage.removeItem(REMEMBER_KEY);
+        localStorage.removeItem(STORAGE_KEYS.REMEMBER_IDENTIFIER);
       }
 
       const { customer } = await userService.getCustomer();
@@ -229,7 +227,7 @@ export default function RootLoginForm() {
               onChange={(e) => {
                 setRememberMe(e.target.checked);
                 if (!e.target.checked) {
-                  localStorage.removeItem(REMEMBER_KEY);
+                  localStorage.removeItem(STORAGE_KEYS.REMEMBER_IDENTIFIER);
                 }
               }}
               className="size-4 text-[#6cc200] bg-gray-100 border-gray-300 rounded focus:ring-[#6cc200] focus:ring-2"

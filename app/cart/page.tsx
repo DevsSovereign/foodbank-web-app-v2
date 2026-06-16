@@ -91,10 +91,6 @@ export default function CartPage() {
     }
   };
 
-  const handleGoToCheckout = () => {
-    return router.push(`/checkout?sub=${subtotal}&del=${deliveryCharge}&svc=${serviceCharge}`);
-  };
-
   const { isPending, mutate } = useMutation({
     mutationFn: userService.validatePromoCode,
     onSuccess: (data) => {
@@ -453,7 +449,7 @@ export default function CartPage() {
                         </div>
 
                         <button
-                          onClick={handleGoToCheckout}
+                          onClick={() => router.push("/checkout")}
                           disabled={!isInstructionAgreed}
                           className="w-full bg-[#8cc629] disabled:opacity-60 text-white py-4 rounded-md font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#7db424] transition-colors mt-4 tracking-wide uppercase"
                         >

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { XCircle } from "lucide-react";
+import { STORAGE_KEYS } from "@/lib/auth-utils";
 
 interface FreeDeliveryModalProps {
   open: boolean;
@@ -29,6 +30,8 @@ export default function FreeDeliveryModal({ open, onClose }: FreeDeliveryModalPr
       // Reset state for future triggers after modal is closed
       setTimeout(() => setIsClaimed(false), 500);
     }, 1500); // 1500ms for an even smoother, slower zoom-off
+
+    sessionStorage.setItem(STORAGE_KEYS.FREE_DELIVERY, "done");
   };
 
   if (!open && !show) return null;

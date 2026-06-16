@@ -15,39 +15,49 @@ import SpinAndWinModal from "@/components/ui/SpinAndWinModal";
 import FreeDeliveryModal from "@/components/ui/FreeDeliveryModal";
 import LoadingBlurOverlay from "@/components/ui/LoadingBlurOverlay";
 import { useUserStore } from "@/store/useUserStore";
+import { STORAGE_KEYS } from "@/lib/auth-utils";
 
 export default function HomePage() {
   const [isCategoriesLoading, setIsCategoriesLoading] = useState<boolean>(false);
   const [isOffersLoading, setIsOffersLoading] = useState<boolean>(false);
-  const { userEligibles } = useUserStore();
-
-  const spinEligible = !!userEligibles?.discountSpin?.eligible;
-  const freeDeliveryEligible = !!userEligibles?.freeDelivery?.eligible;
-
   const [isSpinOpen, setIsSpinOpen] = useState<boolean>(false);
   const [isFreeDeliveryOpen, setIsFreeDeliveryOpen] = useState<boolean>(false);
+  const { userEligibles } = useUserStore();
 
-  // Open the eligible modal(s). When both are eligible, show Spin & Win first;
-  // Free Delivery is opened afterwards once Spin & Win is closed.
-  useEffect(() => {
-    if (spinEligible) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsSpinOpen(true);
-    } else if (freeDeliveryEligible) {
-      setIsFreeDeliveryOpen(true);
-    }
-  }, [spinEligible, freeDeliveryEligible]);
+  const spinEligible =
+    !!userEligibles?.discountSpin?.eligible && !!userEligibles?.discountSpin?.showToUser;
+
+  const freeDeliveryEligible =
+    !!userEligibles?.freeDelivery?.eligible && !!userEligibles?.freeDelivery?.showToUser;
 
   // Claiming the spin reward advances to Free Delivery (if eligible).
   const handleSpinClaim = () => {
+    const hasClaimed = !!sessionStorage.getItem(STORAGE_KEYS.FREE_DELIVERY);
+
     setIsSpinOpen(false);
-    if (freeDeliveryEligible) {
+
+    if (freeDeliveryEligible && !hasClaimed) {
       setIsFreeDeliveryOpen(true);
     }
   };
 
   // Dismissing the spin modal (✕) closes everything — no advance.
   const handleSpinDismiss = () => setIsSpinOpen(false);
+
+  // Open the eligible modal(s). When both are eligible, show Spin & Win first;
+  // Free Delivery is opened afterwards once Spin & Win is closed. A user who has
+  // already spun skips straight to Free Delivery.
+  useEffect(() => {
+    const hasSpun = !!sessionStorage.getItem(STORAGE_KEYS.SPINNED_ITEM);
+    const hasClaimed = !!sessionStorage.getItem(STORAGE_KEYS.FREE_DELIVERY);
+
+    if (spinEligible && !hasSpun) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsSpinOpen(true);
+    } else if (freeDeliveryEligible && !hasClaimed) {
+      setIsFreeDeliveryOpen(true);
+    }
+  }, [spinEligible, freeDeliveryEligible]);
 
   return (
     <>
@@ -87,6 +97,7 @@ export default function HomePage() {
 
       {/* gamification modals — Spin & Win shows first, then Free Delivery */}
       <SpinAndWinModal open={isSpinOpen} onClose={handleSpinDismiss} onClaim={handleSpinClaim} />
+
       <FreeDeliveryModal open={isFreeDeliveryOpen} onClose={() => setIsFreeDeliveryOpen(false)} />
     </>
   );

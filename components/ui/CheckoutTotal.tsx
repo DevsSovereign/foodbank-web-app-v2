@@ -1,17 +1,11 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import useGetCheckoutTotal from "@/hooks/useGetCheckoutTotal";
 
 type CheckoutTotalType = "subtotal" | "deliveryCharge" | "serviceCharge" | "total";
 
 export default function CheckoutTotal({ type = "total" }: { type: CheckoutTotalType }) {
-  const searchParams = useSearchParams();
-
-  const subtotal = Number(searchParams.get("sub") ?? 0);
-  const deliveryCharge = Number(searchParams.get("del") ?? 0);
-  const serviceCharge = Number(searchParams.get("svc") ?? 500);
-
-  const total = subtotal + deliveryCharge + serviceCharge;
+  const { subtotal, deliveryFee, serviceFee, amountPay } = useGetCheckoutTotal();
 
   const displayedValue = () => {
     switch (type) {
@@ -19,13 +13,13 @@ export default function CheckoutTotal({ type = "total" }: { type: CheckoutTotalT
         return subtotal;
 
       case "deliveryCharge":
-        return deliveryCharge;
+        return deliveryFee;
 
       case "serviceCharge":
-        return serviceCharge;
+        return serviceFee;
 
       default:
-        return total;
+        return amountPay;
     }
   };
 

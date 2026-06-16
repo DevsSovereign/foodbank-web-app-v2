@@ -118,7 +118,7 @@ function CheckoutPageContent() {
           </button>
 
           <div className="hidden md:flex items-center gap-6">
-            <Link
+            {/* <Link
               href="/categories"
               className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 text-gray-600 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-gray-100 transition"
             >
@@ -136,7 +136,7 @@ function CheckoutPageContent() {
               >
                 <path d="m6 9 6 6 6-6" />
               </svg>
-            </Link>
+            </Link> */}
 
             <Link
               href="/dashboard/track-delivery"

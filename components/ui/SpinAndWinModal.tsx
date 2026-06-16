@@ -5,6 +5,7 @@ import Image from "next/image";
 import { XCircle } from "lucide-react";
 import { useGetSpinItems } from "@/lib/queries";
 import LoaderSection from "./Loader";
+import { STORAGE_KEYS } from "@/lib/auth-utils";
 
 type ModalState = "unlocked" | "spinning" | "won";
 
@@ -15,11 +16,6 @@ interface SpinAndWinModalProps {
   /** Claim the reward — advances to the next eligible modal. */
   onClaim: () => void;
 }
-
-const getAlreadySpinned = () => {
-  if (typeof window === "undefined") return;
-  return sessionStorage.getItem("fb-spinned-item");
-};
 
 export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinModalProps) {
   const [modalState, setModalState] = useState<ModalState>("unlocked");
@@ -34,8 +30,6 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
   const segmentCount = items.length;
   const segmentAngle = segmentCount > 0 ? 360 / segmentCount : 0;
   const wonItem = winnerIndex != null ? items[winnerIndex]?.scopeId : undefined;
-
-  const isAlreadySpinned = !!getAlreadySpinned();
 
   const formatPrize = (scope: string, value: number) => {
     return scope === "Fixed Amount" ? `₦${value.toLocaleString()} Off` : `${value}% Off`;
@@ -67,7 +61,7 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
       setIsAnimating(false);
       setModalState("won");
       // Persist the won prize so it can be applied/claimed later.
-      sessionStorage.setItem("fb-spinned-item", items[winner].scopeId._id);
+      sessionStorage.setItem(STORAGE_KEYS.SPINNED_ITEM, items[winner]._id);
     }, 3000); // 3 seconds spinning
   };
 
@@ -82,7 +76,7 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
     setWinnerIndex(null);
   }, [open]);
 
-  if (!open || isAlreadySpinned) return null;
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 overflow-y-auto">
@@ -275,7 +269,7 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
                   onClick={onClaim}
                   className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white font-bold py-3.5 rounded-xl text-[18px] transition-all shadow-lg shadow-black/20 tracking-wide mb-4 active:scale-95"
                 >
-                  Thank you!
+                  Claim it!
                 </button>
                 <p className="text-[13px] text-white/80 leading-relaxed italic">
                   Thank you for shopping with us! Your gift will be added to your current order over

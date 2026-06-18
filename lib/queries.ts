@@ -26,6 +26,7 @@ export const queryKeys = {
   transactions: "transactions",
   gamification: "gamification",
   spinItems: "spinItems",
+  adminConfig: "adminConfig",
 };
 
 // queries
@@ -194,6 +195,20 @@ export const useGetUserTransactions = () => {
     queryFn: async () => {
       return await userService.getUserTransactions();
     },
+  });
+
+  return queryResult;
+};
+
+export const useGetAdminGamificationConfig = () => {
+  const token = getAuthToken();
+
+  const queryResult = useQuery({
+    queryKey: [queryKeys.adminConfig],
+    queryFn: async () => {
+      return await userService.getAdminGamificationConfig();
+    },
+    enabled: !!token,
   });
 
   return queryResult;

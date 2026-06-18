@@ -313,6 +313,13 @@ interface PromoCodeGamificationCategory {
   showToUser: boolean;
 }
 
+export interface AdminGamifiedEnabled {
+  checkoutCategory: { enabled: boolean };
+  discountSpin: { enabled: boolean; delaySeconds: number; durationSeconds: number };
+  freeDelivery: { enabled: boolean; durationSeconds: number };
+  promoCode: { enabled: boolean };
+}
+
 export interface UserGamification {
   checkoutCategory: CheckoutGamificationCategory;
   discountSpin: DiscountSpinGamificationCategory;

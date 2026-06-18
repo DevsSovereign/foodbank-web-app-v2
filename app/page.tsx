@@ -22,13 +22,17 @@ export default function HomePage() {
   const [isOffersLoading, setIsOffersLoading] = useState<boolean>(false);
   const [isSpinOpen, setIsSpinOpen] = useState<boolean>(false);
   const [isFreeDeliveryOpen, setIsFreeDeliveryOpen] = useState<boolean>(false);
-  const { userEligibles } = useUserStore();
+  const { userEligibles, adminGamifiedEnabled } = useUserStore();
 
   const spinEligible =
-    !!userEligibles?.discountSpin?.eligible && !!userEligibles?.discountSpin?.showToUser;
+    !!adminGamifiedEnabled?.discountSpin?.enabled &&
+    !!userEligibles?.discountSpin?.eligible &&
+    !!userEligibles?.discountSpin?.showToUser;
 
   const freeDeliveryEligible =
-    !!userEligibles?.freeDelivery?.eligible && !!userEligibles?.freeDelivery?.showToUser;
+    !!adminGamifiedEnabled?.freeDelivery?.enabled &&
+    !!userEligibles?.freeDelivery?.eligible &&
+    !!userEligibles?.freeDelivery?.showToUser;
 
   // Claiming the spin reward advances to Free Delivery (if eligible).
   const handleSpinClaim = () => {

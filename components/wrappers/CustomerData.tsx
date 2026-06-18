@@ -1,7 +1,11 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
-import { useGetCustomer, useGetUserGamification } from "@/lib/queries";
+import {
+  useGetAdminGamificationConfig,
+  useGetCustomer,
+  useGetUserGamification,
+} from "@/lib/queries";
 import { useUserStore } from "@/store/useUserStore";
 
 const CustomerDataProvider = ({ children }: { children: ReactNode }) => {
@@ -9,7 +13,8 @@ const CustomerDataProvider = ({ children }: { children: ReactNode }) => {
 
   // fetch user details on root layout
   const { data: customerData } = useGetCustomer();
-  const { data: gamification } = useGetUserGamification();
+  const { data: adminGamifiedEnabled } = useGetAdminGamificationConfig();
+  const { data: userEligibles } = useGetUserGamification();
 
   // update user state
   useEffect(() => {
@@ -19,9 +24,10 @@ const CustomerDataProvider = ({ children }: { children: ReactNode }) => {
 
   // update user eligibles
   useEffect(() => {
-    if (!gamification) return;
-    setUserEligibles(gamification);
-  }, [gamification, setUserEligibles]);
+    if (!userEligibles || !adminGamifiedEnabled) return;
+
+    setUserEligibles({ adminGamifiedEnabled, userEligibles });
+  }, [adminGamifiedEnabled, userEligibles, setUserEligibles]);
 
   return children;
 };

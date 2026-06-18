@@ -10,6 +10,7 @@ import {
   TransactionHistoryResponse,
   UserGamification,
   SpinItems,
+  AdminGamifiedEnabled,
 } from "@/types/user";
 import { apiClient } from "../api-client";
 
@@ -73,6 +74,11 @@ export const userService = {
     return await apiClient.get<TransactionHistoryResponse>(
       `/users/transaction-history/transactions?limit=5`,
     );
+  },
+
+  async getAdminGamificationConfig() {
+    const res = await apiClient.get<{ data: AdminGamifiedEnabled }>("/user/gamification/config/me");
+    return res.data;
   },
 
   async getGamificationState() {

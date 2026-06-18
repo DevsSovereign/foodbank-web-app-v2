@@ -10,6 +10,7 @@ import { useMutation } from "@tanstack/react-query";
 import { userService } from "@/lib/services/user.service";
 import { handleError } from "@/lib/handle-error";
 import { ClaimGamificationPayload } from "@/types/user";
+import { useToast } from "./toast/ToastProvider";
 
 type ModalState = "unlocked" | "spinning" | "won";
 
@@ -26,14 +27,21 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
   const [rotation, setRotation] = useState<number>(0);
   const [isAnimating, setIsAnimating] = useState<boolean>(false);
   const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
+  const { toast } = useToast();
 
   const { data: spinItems, isLoading: spinItemsLoading } = useGetSpinItems();
 
   // claim mutation
   const { isPending: isClaiming, mutate: claimMutation } = useMutation({
     mutationFn: userService.claimGamification,
-    onSuccess: () => onClaim(),
-    onError: (error) => handleError(error),
+    onSuccess: (data) => {
+      console.log(data);
+      onClaim();
+    },
+    onError: (error) => {
+      const message = handleError(error);
+      toast({ variant: "error", title: message });
+    },
   });
 
   // The actual prizes on the wheel, one segment per function.
@@ -72,17 +80,19 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
       setIsAnimating(false);
       setModalState("won");
       // Persist the won prize so it can be applied/claimed later.
-      sessionStorage.setItem(STORAGE_KEYS.SPINNED_ITEM, items[winner]._id);
+      sessionStorage.setItem(STORAGE_KEYS.SPINNED_ITEM, JSON.stringify(items[winner]));
     }, 3000); // 3 seconds spinning
   };
 
   const handleOnClaim = () => {
+    const wonItem = winnerIndex !== null ? items[winnerIndex].scopeId : items[0].scopeId;
+
     const payload: ClaimGamificationPayload = {
-      orderId: "",
-      reward: "string",
+      orderId: wonItem._id,
+      reward: wonItem.scope,
       rewardType: "discountSpin",
-      expiresAt: "string",
-      status: "string",
+      expiresAt: "",
+      status: wonItem.isActive ? "active" : "",
     };
 
     claimMutation(payload);
@@ -291,7 +301,7 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
                 <button
                   onClick={handleOnClaim}
                   disabled={isClaiming}
-                  className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white font-bold py-3.5 rounded-xl text-[18px] transition-all shadow-lg shadow-black/20 tracking-wide mb-4 active:scale-95"
+                  className="w-full bg-[#8cc629] disabled:opacity-70 hover:bg-[#7db424] text-white font-bold py-3.5 rounded-xl text-[18px] transition-all shadow-lg shadow-black/20 tracking-wide mb-4 active:scale-95"
                 >
                   {isClaiming ? "Claiming..." : "Claim it!"}
                 </button>

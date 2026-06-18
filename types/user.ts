@@ -283,6 +283,14 @@ export interface GamificationReward {
   usedAt: string;
 }
 
+export interface ClaimGamificationPayload {
+  orderId: string;
+  reward: string;
+  rewardType: GamificationRewardType;
+  expiresAt: string;
+  status: string;
+}
+
 interface DiscountSpinGamificationCategory {
   delaySeconds: number;
   durationSeconds: number;

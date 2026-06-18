@@ -6,6 +6,10 @@ import { XCircle } from "lucide-react";
 import { useGetSpinItems } from "@/lib/queries";
 import LoaderSection from "./Loader";
 import { STORAGE_KEYS } from "@/lib/auth-utils";
+import { useMutation } from "@tanstack/react-query";
+import { userService } from "@/lib/services/user.service";
+import { handleError } from "@/lib/handle-error";
+import { ClaimGamificationPayload } from "@/types/user";
 
 type ModalState = "unlocked" | "spinning" | "won";
 
@@ -24,6 +28,13 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
   const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
 
   const { data: spinItems, isLoading: spinItemsLoading } = useGetSpinItems();
+
+  // claim mutation
+  const { isPending: isClaiming, mutate: claimMutation } = useMutation({
+    mutationFn: userService.claimGamification,
+    onSuccess: () => onClaim(),
+    onError: (error) => handleError(error),
+  });
 
   // The actual prizes on the wheel, one segment per function.
   const items = spinItems?.functions ?? [];
@@ -63,6 +74,18 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
       // Persist the won prize so it can be applied/claimed later.
       sessionStorage.setItem(STORAGE_KEYS.SPINNED_ITEM, items[winner]._id);
     }, 3000); // 3 seconds spinning
+  };
+
+  const handleOnClaim = () => {
+    const payload: ClaimGamificationPayload = {
+      orderId: "",
+      reward: "string",
+      rewardType: "discountSpin",
+      expiresAt: "string",
+      status: "string",
+    };
+
+    claimMutation(payload);
   };
 
   // Reset state when modal opens
@@ -266,10 +289,11 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
             ) : (
               <>
                 <button
-                  onClick={onClaim}
+                  onClick={handleOnClaim}
+                  disabled={isClaiming}
                   className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white font-bold py-3.5 rounded-xl text-[18px] transition-all shadow-lg shadow-black/20 tracking-wide mb-4 active:scale-95"
                 >
-                  Claim it!
+                  {isClaiming ? "Claiming..." : "Claim it!"}
                 </button>
                 <p className="text-[13px] text-white/80 leading-relaxed italic">
                   Thank you for shopping with us! Your gift will be added to your current order over

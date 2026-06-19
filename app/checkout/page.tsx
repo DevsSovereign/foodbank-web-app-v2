@@ -21,9 +21,10 @@ import { useToast } from "@/components/ui/toast/ToastProvider";
 import { useGetCustomer } from "@/lib/queries";
 import { useRouter } from "next/navigation";
 import useGetCheckoutTotal from "@/hooks/useGetCheckoutTotal";
+import { removeFromStorage } from "@/lib/auth-utils";
 
 function CheckoutPageContent() {
-  const { user, setUser } = useUserStore();
+  const { user, setUser, userEligibles, isSpinDiscountApplied } = useUserStore();
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
@@ -36,7 +37,7 @@ function CheckoutPageContent() {
     return tomorrow;
   });
   const { customerAddress, setCustomerAddress } = useUserLocation({ isDetectAddress: true });
-  const { deliveryFee, serviceFee, amountPay } = useGetCheckoutTotal();
+  const { deliveryFee, serviceFee, spinDiscount, amountPay } = useGetCheckoutTotal();
   const { toast } = useToast();
   const { refetch: refetchUser } = useGetCustomer();
   const router = useRouter();
@@ -51,6 +52,7 @@ function CheckoutPageContent() {
 
       setUser(userProfile.customer);
       toast({ variant: "success", title: "Order Created Successfully" });
+      removeFromStorage("SPINNED_ITEM")
       router.replace("/dashboard/order-history");
     },
 
@@ -61,6 +63,13 @@ function CheckoutPageContent() {
   });
 
   const handleCheckout = () => {
+    // Attach the Spin & Win reward only when the user applied it and it has a value.
+    const spinReward = userEligibles?.discountSpin?.reward;
+    const gamified: CreateOrderPayload["gamified"] =
+      isSpinDiscountApplied && spinDiscount > 0 && spinReward?.rewardId
+        ? [{ rewardId: spinReward.rewardId, rewardType: spinReward.rewardType ?? "discountSpin" }]
+        : [];
+
     const payload: CreateOrderPayload = {
       deliveryDetails: customerAddress,
       deliveryFee,
@@ -69,7 +78,7 @@ function CheckoutPageContent() {
       deliveryDateOption: selectedDeliveryDate.toISOString(),
       orderType: "outright",
       topUpAmount: 0,
-      gamified: [],
+      gamified,
     };
 
     return mutate(payload);
@@ -415,6 +424,13 @@ function CheckoutPageContent() {
                 ₦{serviceCharge.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
               </span> */}
             </div>
+
+            {spinDiscount > 0 && (
+              <div className="flex justify-between items-center text-gray-500 text-[14px] mb-4">
+                <span>Spin &amp; Win Discount</span>
+                <CheckoutTotal type="discount" />
+              </div>
+            )}
 
             <div className="flex justify-between items-center pt-5 border-t border-gray-100">
               <span className="font-bold text-gray-800 text-[15px]">Total</span>

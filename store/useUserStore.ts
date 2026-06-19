@@ -5,12 +5,18 @@ interface UserStore {
   user: UserResponse | null;
   userEligibles: UserGamification | null;
   adminGamifiedEnabled: AdminGamifiedEnabled | null;
+  /** Whether the user has toggled their Spin & Win discount on at checkout. */
+  isSpinDiscountApplied: boolean;
 }
 
 interface UserStoreActions {
   setUser: (user: UserResponse) => void;
   clearUserStore: () => void;
-  setUserEligibles: ({ adminGamifiedEnabled, userEligibles }: Omit<UserStore, "user">) => void;
+  setUserEligibles: ({
+    adminGamifiedEnabled,
+    userEligibles,
+  }: Pick<UserStore, "adminGamifiedEnabled" | "userEligibles">) => void;
+  setIsSpinDiscountApplied: (isApplied: boolean) => void;
 }
 
 export const useUserStore = create<UserStore & UserStoreActions>((set) => ({
@@ -18,6 +24,7 @@ export const useUserStore = create<UserStore & UserStoreActions>((set) => ({
   user: null,
   userEligibles: null,
   adminGamifiedEnabled: null,
+  isSpinDiscountApplied: false,
 
   // actions
   setUser: (user) => set({ user }),
@@ -25,5 +32,7 @@ export const useUserStore = create<UserStore & UserStoreActions>((set) => ({
   setUserEligibles: ({ adminGamifiedEnabled, userEligibles }) =>
     set({ adminGamifiedEnabled, userEligibles }),
 
-  clearUserStore: () => set({ user: null, userEligibles: null }),
+  setIsSpinDiscountApplied: (isSpinDiscountApplied) => set({ isSpinDiscountApplied }),
+
+  clearUserStore: () => set({ user: null, userEligibles: null, isSpinDiscountApplied: false }),
 }));

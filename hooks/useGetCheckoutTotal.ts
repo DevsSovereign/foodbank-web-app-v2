@@ -5,6 +5,7 @@ import { useGetAllFees, useGetCartItems, useCheckFirstOrder } from "@/lib/querie
 import { toCartItem, type ApplicableFees } from "@/types/cart";
 import { useUserStore } from "@/store/useUserStore";
 import useUserLocation from "@/hooks/useUserLocation";
+import { getSpinDiscount, getSpinnedReward } from "@/lib/gamification";
 
 /**
  * Derives the checkout totals from the authoritative server data (cart items,
@@ -15,7 +16,7 @@ import useUserLocation from "@/hooks/useUserLocation";
  * source of truth for what a user is actually charged.
  */
 const useGetCheckoutTotal = () => {
-  const { user } = useUserStore();
+  const { user, isSpinDiscountApplied } = useUserStore();
   const { data: cartItemsResponse, isLoading: cartLoading } = useGetCartItems();
   const { data: allFeesResponse, isLoading: feesLoading } = useGetAllFees();
   const { data: firstOrder, isLoading: firstOrderLoading } = useCheckFirstOrder({
@@ -44,11 +45,25 @@ const useGetCheckoutTotal = () => {
   // Mirror the cart's fallbacks exactly so both screens show identical totals.
   const deliveryFee = applicableFee?.deliveryFee || 4000;
   const serviceFee = applicableFee?.serviceFee || 500;
-  const amountPay = subtotal + deliveryFee + serviceFee;
+  const grossTotal = subtotal + deliveryFee + serviceFee;
+
+  // Spin & Win discount, only when the user has toggled it on.
+  const spinReward = isSpinDiscountApplied ? getSpinnedReward() : null;
+  const spinDiscount = getSpinDiscount(spinReward, grossTotal);
+
+  const amountPay = grossTotal - spinDiscount;
 
   const isLoading = cartLoading || feesLoading || firstOrderLoading;
 
-  return { subtotal, deliveryFee, serviceFee, amountPay, isLoading };
+  return {
+    subtotal,
+    deliveryFee,
+    serviceFee,
+    spinDiscount,
+    grossTotal,
+    amountPay,
+    isLoading,
+  };
 };
 
 export default useGetCheckoutTotal;

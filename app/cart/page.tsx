@@ -12,7 +12,7 @@ import { cartService } from "@/lib/services/cart.service";
 import type { ApplicableFees, CartItem } from "@/types/cart";
 import { toCartItem } from "@/types/cart";
 import { useRouter } from "next/navigation";
-import { getAuthToken } from "@/lib/auth-utils";
+import { getAuthToken, getFromStorage } from "@/lib/auth-utils";
 import ErrorSection from "@/components/ui/ErrorSection";
 import { handleError } from "@/lib/handle-error";
 import { useToast } from "@/components/ui/toast/ToastProvider";
@@ -23,9 +23,11 @@ import useUserLocation from "@/hooks/useUserLocation";
 import { useUserStore } from "@/store/useUserStore";
 import LoaderSection from "@/components/ui/Loader";
 import { userService } from "@/lib/services/user.service";
+import { SpinFunction } from "@/types/user";
+import { getSpinDiscount } from "@/lib/gamification";
 
 export default function CartPage() {
-  const { user, userEligibles } = useUserStore();
+  const { user, userEligibles, isSpinDiscountApplied, setIsSpinDiscountApplied } = useUserStore();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [couponCode, setCouponCode] = useState<string>("");
   const [isInstructionAgreed, setIsInstructionAgreed] = useState<boolean>(false);
@@ -44,6 +46,15 @@ export default function CartPage() {
   });
   const { customerState } = useUserLocation({ isDetectAddress: true });
   const queryClient = useQueryClient();
+  const spinnedReward = !!getFromStorage("SPINNED_ITEM")
+    ? (JSON.parse(getFromStorage("SPINNED_ITEM") as string) as SpinFunction)
+    : null;
+  const freeDeliveryReward = !!getFromStorage("FREE_DELIVERY")
+    ? (getFromStorage("FREE_DELIVERY") as string)
+    : null;
+  const promoCodeReward = !!getFromStorage("PROMO_CODE")
+    ? (getFromStorage("PROMO_CODE") as string)
+    : null;
 
   const locationFee = useMemo(() => {
     return allFeesResponse?.allfees?.find((fee) => {
@@ -64,7 +75,11 @@ export default function CartPage() {
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const deliveryCharge = applicableFee?.deliveryFee || 4000;
   const serviceCharge = applicableFee?.serviceFee || 500; // default service charge;
-  const total = subtotal + deliveryCharge + serviceCharge;
+  const grossTotal = subtotal + deliveryCharge + serviceCharge;
+
+  // Spin & Win discount, applied only when the user toggles it on.
+  const spinDiscount = isSpinDiscountApplied ? getSpinDiscount(spinnedReward, grossTotal) : 0;
+  const total = grossTotal - spinDiscount;
 
   const isEmpty = cartItems.length === 0;
 
@@ -364,6 +379,37 @@ export default function CartPage() {
                         ₦{serviceCharge.toLocaleString()}.00
                       </span>
                     </div>
+
+                    {spinnedReward && (
+                      <>
+                        <div className="flex items-center justify-between gap-3 rounded-md bg-[#f9fdf4] border border-[#e2f0cc] px-3 py-2.5">
+                          <span className="text-sm font-medium text-gray-700">
+                            Apply Spin &amp; Win reward
+                          </span>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={isSpinDiscountApplied}
+                            onClick={() => setIsSpinDiscountApplied(!isSpinDiscountApplied)}
+                            className={`relative h-6 w-11 shrink-0 rounded-full p-1 transition-colors duration-300 ${isSpinDiscountApplied ? "bg-[#8cc629]" : "bg-gray-200"}`}
+                          >
+                            <span
+                              className={`block size-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${isSpinDiscountApplied ? "translate-x-5" : "translate-x-0"}`}
+                            />
+                          </button>
+                        </div>
+
+                        {isSpinDiscountApplied && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Spin &amp; Win Discount</span>
+                            <span className="font-bold text-[#8cc629]">
+                              −₦{spinDiscount.toLocaleString()}.00
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
+
                     <div className="pt-4 border-t border-gray-100 flex justify-between">
                       <span className="font-bold text-gray-800">Total</span>
                       <span className="text-xl font-bold text-gray-800">

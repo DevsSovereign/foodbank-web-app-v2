@@ -86,6 +86,7 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
 
   const handleOnClaim = () => {
     const wonItem = winnerIndex !== null ? items[winnerIndex].scopeId : items[0].scopeId;
+    const isDiscount = wonItem.scope.includes("discount".toLowerCase());
 
     const payload: ClaimGamificationPayload = {
       orderId: wonItem._id,
@@ -93,6 +94,9 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
       rewardType: "discountSpin",
       expiresAt: "",
       status: wonItem.isActive ? "active" : "",
+      discountSpinBonus: wonItem.scope === "Fixed Amount" ? wonItem.value : undefined,
+      discountSpinDiscount: isDiscount ? wonItem.value : undefined,
+      // promoCodeDetails: undefined,
     };
 
     claimMutation(payload);

@@ -12,6 +12,8 @@ import {
   SpinItems,
   AdminGamifiedEnabled,
   ClaimGamificationPayload,
+  GamificationRewardType,
+  ClaimRewardResponse,
 } from "@/types/user";
 import { apiClient } from "../api-client";
 
@@ -95,11 +97,25 @@ export const userService = {
   },
 
   async claimGamification(payload: ClaimGamificationPayload) {
-    const res = await apiClient.post<{ data: UserGamification }>(
+    const res = await apiClient.post<{ data: ClaimRewardResponse }>(
       "/user/gamification/rewards",
       payload,
     );
     return res.data;
+  },
+
+  async useClaimedGamification({
+    kind,
+    orderId,
+  }: {
+    kind: GamificationRewardType;
+    orderId: number;
+  }) {
+    const res = await apiClient.post<{ message: string }>("/user/gamification/reward/use", {
+      kind,
+      orderId,
+    });
+    return res;
   },
 
   async validatePromoCode({ promoCode, orderAmount }: { promoCode: string; orderAmount: number }) {

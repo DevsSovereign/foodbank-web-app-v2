@@ -289,6 +289,33 @@ export interface ClaimGamificationPayload {
   rewardType: GamificationRewardType;
   expiresAt: string;
   status: string;
+  discountSpinDiscount?: number;
+  discountSpinBonus?: number;
+  promoCodeDetails?: number;
+  // checkoutCategory: number;
+}
+
+export interface ClaimRewardResponse {
+  userId: string;
+  reward: string;
+  rewardType: GamificationRewardType;
+  discountSpinBonus: number | null;
+  discountSpinDiscount: number | null;
+  promoCodeDetails: number | null;
+  checkoutCategory: number | null;
+  order: string;
+  status: string;
+  expiresAt: string | null;
+  issuedAt: string;
+  claimedAt: string;
+  usedAt: string;
+  presentationSeen: false;
+  source: GamificationRewardType;
+  displayLabel: string;
+  _id: string;
+  wonOn: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface DiscountSpinGamificationCategory {
@@ -342,7 +369,7 @@ export interface SpinScope {
   createdAt: string;
   image: string;
   isActive: boolean;
-  scope: string;
+  scope: "Fixed Amount" | "5% discount on all pruchase" | "Percentage discount";
   updatedAt: string;
   value: number;
   _id: string;

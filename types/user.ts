@@ -252,6 +252,29 @@ export type TransactionHistoryResponse = {
   count: number;
 };
 
+export interface RewardHistory {
+  _id: string;
+  userId: string;
+  reward: string;
+  rewardType: GamificationRewardType;
+  order: string;
+  status: "active" | "used";
+  expiresAt: string;
+  wonOn: string;
+  createdAt: string;
+  updatedAt: string;
+  checkoutCategory: string;
+  claimedAt: string;
+  discountSpinBonus: string;
+  discountSpinDiscount: number;
+  displayLabel: string;
+  issuedAt: string;
+  presentationSeen: boolean;
+  promoCodeDetails: string;
+  source: GamificationRewardType;
+  usedAt: string;
+}
+
 export type GamificationPresentationType = "banner" | "modal" | "inline";
 export type GamificationRewardType = "discountSpin" | "promoCode" | "freeDelivery";
 
@@ -261,6 +284,18 @@ interface CheckoutGamificationCategory {
   presentationType: GamificationPresentationType;
   priority: number;
   showToUser: boolean;
+}
+
+export interface UsedClaimResponse {
+  kind: GamificationRewardType;
+  rewardType: GamificationRewardType;
+  active: boolean;
+  rewardId: string;
+  order: string;
+  status: "active" | "used";
+  usedAt: string;
+  source: GamificationRewardType;
+  displayLabel: string;
 }
 
 export interface GamificationReward {
@@ -284,11 +319,11 @@ export interface GamificationReward {
 }
 
 export interface ClaimGamificationPayload {
-  orderId: string;
   reward: string;
   rewardType: GamificationRewardType;
-  expiresAt: string;
-  status: string;
+  orderId?: string;
+  expiresAt?: string;
+  status?: string;
   discountSpinDiscount?: number;
   discountSpinBonus?: number;
   promoCodeDetails?: number;

@@ -22,9 +22,11 @@ import { useGetCustomer } from "@/lib/queries";
 import { useRouter } from "next/navigation";
 import useGetCheckoutTotal from "@/hooks/useGetCheckoutTotal";
 import { removeFromStorage } from "@/lib/auth-utils";
+import { useRewardStore } from "@/store/useRewardStore";
 
 function CheckoutPageContent() {
   const { user, setUser, userEligibles, isSpinDiscountApplied } = useUserStore();
+  const { appliedReward, clearAppliedReward } = useRewardStore();
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
@@ -52,7 +54,9 @@ function CheckoutPageContent() {
 
       setUser(userProfile.customer);
       toast({ variant: "success", title: "Order Created Successfully" });
-      removeFromStorage("SPINNED_ITEM")
+      // Consume the applied reward so it can only be used once.
+      removeFromStorage("SPINNED_ITEM");
+      clearAppliedReward();
       router.replace("/dashboard/order-history");
     },
 
@@ -63,10 +67,12 @@ function CheckoutPageContent() {
   });
 
   const handleCheckout = () => {
-    // Attach the Spin & Win reward only when the user applied it and it has a value.
+    // A reward chosen from Reward History wins; otherwise fall back to a freshly
+    // spun reward toggled on in the cart.
     const spinReward = userEligibles?.discountSpin?.reward;
-    const gamified: CreateOrderPayload["gamified"] =
-      isSpinDiscountApplied && spinDiscount > 0 && spinReward?.rewardId
+    const gamified: CreateOrderPayload["gamified"] = appliedReward
+      ? [{ rewardId: appliedReward._id, rewardType: appliedReward.rewardType }]
+      : isSpinDiscountApplied && spinDiscount > 0 && spinReward?.rewardId
         ? [{ rewardId: spinReward.rewardId, rewardType: spinReward.rewardType ?? "discountSpin" }]
         : [];
 

@@ -14,6 +14,8 @@ import {
   ClaimGamificationPayload,
   GamificationRewardType,
   ClaimRewardResponse,
+  RewardHistory,
+  UsedClaimResponse,
 } from "@/types/user";
 import { apiClient } from "../api-client";
 
@@ -79,6 +81,14 @@ export const userService = {
     );
   },
 
+  async getRewardHistory() {
+    const res = await apiClient.get<{
+      data: { items: RewardHistory[]; total: number; page: number; limit: number };
+    }>(`/user/gamification/rewards/me`);
+
+    return res.data;
+  },
+
   async getAdminGamificationConfig() {
     const res = await apiClient.get<{ data: AdminGamifiedEnabled }>("/user/gamification/config/me");
     return res.data;
@@ -109,12 +119,15 @@ export const userService = {
     orderId,
   }: {
     kind: GamificationRewardType;
-    orderId: number;
+    orderId: string;
   }) {
-    const res = await apiClient.post<{ message: string }>("/user/gamification/reward/use", {
-      kind,
-      orderId,
-    });
+    const res = await apiClient.post<{ message: string; data: UsedClaimResponse }>(
+      "/user/gamification/reward/use",
+      {
+        kind,
+        orderId,
+      },
+    );
     return res;
   },
 

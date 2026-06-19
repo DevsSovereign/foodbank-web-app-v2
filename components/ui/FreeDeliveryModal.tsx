@@ -1,40 +1,51 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { XCircle } from "lucide-react";
 import { STORAGE_KEYS } from "@/lib/auth-utils";
+import { useMutation } from "@tanstack/react-query";
+import { userService } from "@/lib/services/user.service";
+import { useToast } from "./toast/ToastProvider";
+import { handleError } from "@/lib/handle-error";
+import { ClaimGamificationPayload } from "@/types/user";
 
 interface FreeDeliveryModalProps {
   open: boolean;
+  /** Dismiss without claiming (e.g. the ✕ button). */
   onClose: () => void;
 }
 
 export default function FreeDeliveryModal({ open, onClose }: FreeDeliveryModalProps) {
-  const [show, setShow] = useState<boolean>(false);
-  const [isClaimed, setIsClaimed] = useState<boolean>(false);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    if (open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShow(true);
-    } else {
-      setTimeout(() => setShow(false), 300); // fade out duration
-    }
-  }, [open]);
-
-  const handleClaim = () => {
-    setIsClaimed(true);
-    setTimeout(() => {
+  // claim mutation
+  const {
+    isPending: isClaiming,
+    isSuccess: isClaimed,
+    mutate: claimMutation,
+  } = useMutation({
+    mutationFn: userService.claimGamification,
+    onSuccess: (data) => {
+      console.log(data);
+      sessionStorage.setItem(STORAGE_KEYS.FREE_DELIVERY, "fb-free-delivery");
       onClose();
-      // Reset state for future triggers after modal is closed
-      setTimeout(() => setIsClaimed(false), 500);
-    }, 1500); // 1500ms for an even smoother, slower zoom-off
+    },
+    onError: (error) => {
+      const message = handleError(error);
+      toast({ variant: "error", title: message });
+    },
+  });
 
-    sessionStorage.setItem(STORAGE_KEYS.FREE_DELIVERY, "done");
+  const handleClaimFreeDelivery = () => {
+    const payload: ClaimGamificationPayload = {
+      reward: "Free Delivery" as const,
+      rewardType: "freeDelivery",
+    };
+
+    claimMutation(payload);
   };
 
-  if (!open && !show) return null;
+  if (!open) return null;
 
   return (
     <div
@@ -79,11 +90,11 @@ export default function FreeDeliveryModal({ open, onClose }: FreeDeliveryModalPr
           className={`w-full max-w-[320px] mx-auto relative z-10 mt-4 md:mt-8 transition-opacity duration-300 ${isClaimed ? "opacity-0" : "opacity-100"}`}
         >
           <button
-            onClick={handleClaim}
-            disabled={isClaimed}
-            className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white font-bold py-4 rounded-xl text-[18px] md:text-[20px] transition-all shadow-xl shadow-[#8cc629]/20 tracking-wide mb-4 active:scale-95"
+            onClick={handleClaimFreeDelivery}
+            disabled={isClaimed || isClaiming}
+            className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white font-bold py-4 rounded-xl text-[18px] md:text-[20px] transition-all shadow-xl shadow-[#8cc629]/20 tracking-wide mb-4 active:scale-95 disabled:opacity-50"
           >
-            Claim Reward
+            {isClaiming ? "Claiming" : "Claim Reward"}
           </button>
           <p className="text-[12px] md:text-[13px] text-white/90 font-medium leading-relaxed italic drop-shadow-sm">
             Thank you for shopping with us! Spin again on your next purchase above ₦30,000

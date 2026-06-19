@@ -34,10 +34,7 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
   // claim mutation
   const { isPending: isClaiming, mutate: claimMutation } = useMutation({
     mutationFn: userService.claimGamification,
-    onSuccess: (data) => {
-      console.log(data);
-      onClaim();
-    },
+    onSuccess: () => onClaim(),
     onError: (error) => {
       const message = handleError(error);
       toast({ variant: "error", title: message });

@@ -27,6 +27,7 @@ export const queryKeys = {
   gamification: "gamification",
   spinItems: "spinItems",
   adminConfig: "adminConfig",
+  rewardHistory: "rewardHistory",
 };
 
 // queries
@@ -223,6 +224,17 @@ export const useGetUserGamification = () => {
       return await userService.getGamificationState();
     },
     enabled: !!token,
+  });
+
+  return queryResult;
+};
+
+export const useGetRewardHistory = () => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.rewardHistory],
+    queryFn: async () => {
+      return await userService.getRewardHistory();
+    },
   });
 
   return queryResult;

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useGetAllFees, useGetCartItems, useCheckFirstOrder } from "@/lib/queries";
 import { toCartItem, type ApplicableFees } from "@/types/cart";
 import { useUserStore } from "@/store/useUserStore";
+import { useRewardStore } from "@/store/useRewardStore";
 import useUserLocation from "@/hooks/useUserLocation";
 import { getSpinDiscount, getSpinnedReward } from "@/lib/gamification";
 
@@ -17,6 +18,7 @@ import { getSpinDiscount, getSpinnedReward } from "@/lib/gamification";
  */
 const useGetCheckoutTotal = () => {
   const { user, isSpinDiscountApplied } = useUserStore();
+  const appliedReward = useRewardStore((state) => state.appliedReward);
   const { data: cartItemsResponse, isLoading: cartLoading } = useGetCartItems();
   const { data: allFeesResponse, isLoading: feesLoading } = useGetAllFees();
   const { data: firstOrder, isLoading: firstOrderLoading } = useCheckFirstOrder({
@@ -47,9 +49,14 @@ const useGetCheckoutTotal = () => {
   const serviceFee = applicableFee?.serviceFee || 500;
   const grossTotal = subtotal + deliveryFee + serviceFee;
 
-  // Spin & Win discount, only when the user has toggled it on.
+  // A reward chosen from Reward History takes precedence; otherwise fall back to
+  // a freshly spun reward the user toggled on in the cart.
+  const rewardDiscount =
+    appliedReward?.source === "discountSpin" ? (appliedReward.discountSpinDiscount ?? 0) : 0;
   const spinReward = isSpinDiscountApplied ? getSpinnedReward() : null;
-  const spinDiscount = getSpinDiscount(spinReward, grossTotal);
+  const spinToggleDiscount = getSpinDiscount(spinReward, grossTotal);
+
+  const spinDiscount = Math.min(Math.max(rewardDiscount || spinToggleDiscount, 0), grossTotal);
 
   const amountPay = grossTotal - spinDiscount;
 

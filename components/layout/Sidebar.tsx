@@ -23,6 +23,7 @@ import {
   LayoutDashboard,
   X,
   Menu,
+  Gift,
 } from "lucide-react";
 import { clearAuthToken } from "@/lib/auth-utils";
 import { useUserStore } from "@/store/useUserStore";
@@ -295,7 +296,7 @@ export default function Sidebar() {
                 <span className="font-medium">Repayment History</span>
               </Link>
             </li> */}
-            {/* <li>
+            <li>
               <Link
                 href="/dashboard/reward-history"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
@@ -307,7 +308,7 @@ export default function Sidebar() {
                 <Gift size={20} />
                 <span className="font-medium">Reward History</span>
               </Link>
-            </li> */}
+            </li>
             <li>
               <Link
                 href="/dashboard/faqs"

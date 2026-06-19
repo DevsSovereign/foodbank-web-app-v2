@@ -3,6 +3,7 @@ export const STORAGE_KEYS = {
   SPINNED_ITEM: "fb-spinned-item",
   FREE_DELIVERY: "fb-free-delivery",
   PROMO_CODE: "fb-promo-code",
+  APPLIED_REWARD: "fb-applied-reward",
   REMEMBER_IDENTIFIER: "fb4u_remember_identifier",
 };
 

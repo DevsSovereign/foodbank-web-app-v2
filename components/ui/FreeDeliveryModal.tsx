@@ -26,8 +26,7 @@ export default function FreeDeliveryModal({ open, onClose }: FreeDeliveryModalPr
   } = useMutation({
     mutationFn: userService.claimGamification,
     onSuccess: (data) => {
-      console.log(data);
-      sessionStorage.setItem(STORAGE_KEYS.FREE_DELIVERY, "fb-free-delivery");
+      sessionStorage.setItem(STORAGE_KEYS.FREE_DELIVERY, JSON.stringify(data));
       onClose();
     },
     onError: (error) => {

@@ -132,7 +132,7 @@ export const userService = {
   },
 
   async validatePromoCode({ promoCode, orderAmount }: { promoCode: string; orderAmount: number }) {
-    const res = await apiClient.post<{ data: UserGamification }>(
+    const res = await apiClient.post<{ data: { _id: string } }>(
       "/user/gamification/promo-code/validate",
       { promoCode, orderAmount },
     );

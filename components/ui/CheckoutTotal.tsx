@@ -5,7 +5,7 @@ import useGetCheckoutTotal from "@/hooks/useGetCheckoutTotal";
 type CheckoutTotalType = "subtotal" | "deliveryCharge" | "serviceCharge" | "discount" | "total";
 
 export default function CheckoutTotal({ type = "total" }: { type: CheckoutTotalType }) {
-  const { subtotal, deliveryFee, serviceFee, spinDiscount, amountPay } = useGetCheckoutTotal();
+  const { subtotal, deliveryFee, serviceFee, totalDiscount, amountPay } = useGetCheckoutTotal();
 
   const isDiscount = type === "discount";
 
@@ -21,7 +21,7 @@ export default function CheckoutTotal({ type = "total" }: { type: CheckoutTotalT
         return serviceFee;
 
       case "discount":
-        return spinDiscount;
+        return totalDiscount;
 
       default:
         return amountPay;

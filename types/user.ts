@@ -327,7 +327,7 @@ export interface ClaimGamificationPayload {
   discountSpinDiscount?: number;
   discountSpinBonus?: number;
   promoCodeDetails?: number;
-  // checkoutCategory: number;
+  checkoutCategory?: number;
 }
 
 export interface ClaimRewardResponse {
@@ -433,4 +433,42 @@ export interface SpinItems {
   usageLimitPerUser: number;
   functions: SpinFunction[];
   _id: string;
+}
+
+/** A single toggleable gamification reward shown in the cart totals. */
+export interface RewardToggle {
+  type: GamificationRewardType;
+  /** Label on the toggle row, e.g. "Apply Spin & Win reward". */
+  label: string;
+  /** Label on the discount line shown once applied, e.g. "Spin & Win Discount". */
+  discountLabel: string;
+  /** Naira amount deducted when this reward is applied. */
+  discount: number;
+  isApplied: boolean;
+  onToggle: (value: boolean) => void;
+}
+
+/** A discount actually applied to the checkout total (toggled or dashboard-selected). */
+export interface AppliedDiscount {
+  type: GamificationRewardType;
+  /** Human label, e.g. "Free Delivery Discount". */
+  label: string;
+  /** Naira amount deducted. */
+  amount: number;
+}
+
+export interface CartTotalProps {
+  /** Whether the totals are still resolving (fees / first-order checks). */
+  isLoading: boolean;
+  subtotal: number;
+  deliveryCharge: number;
+  serviceCharge: number;
+  /** Total after any applied discounts. */
+  total: number;
+  /** Toggleable rewards the user has won (spin, free delivery, promo). */
+  rewardToggles: RewardToggle[];
+  accountType: UserResponse["accountType"] | undefined;
+  /** Whether to show the promo-code card. */
+  canUsePromoCode: boolean;
+  onProceedToCheckout: () => void;
 }

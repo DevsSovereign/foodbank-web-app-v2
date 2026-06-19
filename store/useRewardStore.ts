@@ -4,24 +4,33 @@ import { STORAGE_KEYS } from "@/lib/auth-utils";
 import type { RewardHistory } from "@/types/user";
 
 interface RewardStore {
-  /** The reward the user selected to apply on their next checkout, if any. */
-  appliedReward: RewardHistory | null;
-  setAppliedReward: (reward: RewardHistory | null) => void;
-  clearAppliedReward: () => void;
+  /** Rewards the user selected from their dashboard to apply on their next checkout. */
+  selectedRewards: RewardHistory[];
+  /** Adds the reward if not already selected, removes it if it is (de-select). */
+  toggleSelectedReward: (reward: RewardHistory) => void;
+  clearSelectedRewards: () => void;
 }
 
 /**
- * Holds the reward a user chose (from Reward History) to use at checkout.
+ * Holds the reward(s) a user chose (from Reward History) to use at checkout.
  *
- * Persisted to sessionStorage so a mistaken refresh keeps the selection. It is
- * cleared after a successful checkout so a reward can only ever be used once.
+ * Persisted to sessionStorage so a mistaken refresh keeps the selection. They
+ * are cleared after a successful checkout so a reward can only be used once.
  */
 export const useRewardStore = create<RewardStore>()(
   persist(
     (set) => ({
-      appliedReward: null,
-      setAppliedReward: (appliedReward) => set({ appliedReward }),
-      clearAppliedReward: () => set({ appliedReward: null }),
+      selectedRewards: [],
+      toggleSelectedReward: (reward) =>
+        set((state) => {
+          const isSelected = state.selectedRewards.some((r) => r._id === reward._id);
+          return {
+            selectedRewards: isSelected
+              ? state.selectedRewards.filter((r) => r._id !== reward._id)
+              : [...state.selectedRewards, reward],
+          };
+        }),
+      clearSelectedRewards: () => set({ selectedRewards: [] }),
     }),
     {
       name: STORAGE_KEYS.APPLIED_REWARD,

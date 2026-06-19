@@ -2,31 +2,33 @@
 
 import Link from "next/link";
 import { useState, Suspense } from "react";
-import { Home, User, MapPin, Phone, ChevronRight, Loader2, Edit } from "lucide-react";
+import { Home, Loader2 } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import EditCustomerModal from "../../components/checkout/EditCustomerModal";
 import AddPhoneNumberModal from "../../components/checkout/AddPhoneNumberModal";
 import DatePickerModal from "../../components/checkout/DatePickerModal";
-import CheckoutTotal from "@/components/ui/CheckoutTotal";
+import UserCheckoutDetails from "./user-checkout-details/UserCheckoutDetails";
+import CheckoutPaymentDetails from "./checkout-payment-details/CheckoutPaymentDetails";
 import { useUserStore } from "@/store/useUserStore";
-import { formatCurrency } from "@/functions/formatCurrency";
 import useUserLocation from "@/hooks/useUserLocation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cartService } from "@/lib/services/cart.service";
 import { handleError } from "@/lib/handle-error";
 import { CreateOrderPayload } from "@/types/cart";
 import { useToast } from "@/components/ui/toast/ToastProvider";
-import { useGetCustomer } from "@/lib/queries";
+import { queryKeys, useGetCustomer } from "@/lib/queries";
 import { useRouter } from "next/navigation";
 import useGetCheckoutTotal from "@/hooks/useGetCheckoutTotal";
 import { removeFromStorage } from "@/lib/auth-utils";
 import { useRewardStore } from "@/store/useRewardStore";
+import { userService } from "@/lib/services/user.service";
+import { buildGamifiedPayload, getFreeDeliveryReward, getPromoReward } from "@/lib/gamification";
 
 function CheckoutPageContent() {
-  const { user, setUser, userEligibles, isSpinDiscountApplied } = useUserStore();
-  const { appliedReward, clearAppliedReward } = useRewardStore();
+  const { user, setUser, userEligibles, rewardsToUse } = useUserStore();
+  const { selectedRewards, clearSelectedRewards } = useRewardStore();
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
@@ -39,24 +41,28 @@ function CheckoutPageContent() {
     return tomorrow;
   });
   const { customerAddress, setCustomerAddress } = useUserLocation({ isDetectAddress: true });
-  const { deliveryFee, serviceFee, spinDiscount, amountPay } = useGetCheckoutTotal();
+  const { deliveryFee, serviceFee, amountPay } = useGetCheckoutTotal();
   const { toast } = useToast();
   const { refetch: refetchUser } = useGetCustomer();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { isPending: orderIsCreating, mutate } = useMutation({
     mutationFn: cartService.createOrder,
 
     onSuccess: async () => {
       await cartService.outrightSubtractFromWalletById({ amountPay });
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.rewardHistory] });
       const { data: userProfile } = await refetchUser();
       if (!userProfile) return;
 
       setUser(userProfile.customer);
       toast({ variant: "success", title: "Order Created Successfully" });
-      // Consume the applied reward so it can only be used once.
+      // Consume the applied rewards so they can only be used once.
       removeFromStorage("SPINNED_ITEM");
-      clearAppliedReward();
+      removeFromStorage("FREE_DELIVERY");
+      removeFromStorage("PROMO_CODE");
+      clearSelectedRewards();
       router.replace("/dashboard/order-history");
     },
 
@@ -66,17 +72,18 @@ function CheckoutPageContent() {
     },
   });
 
-  const handleCheckout = () => {
-    // A reward chosen from Reward History wins; otherwise fall back to a freshly
-    // spun reward toggled on in the cart.
-    const spinReward = userEligibles?.discountSpin?.reward;
-    const gamified: CreateOrderPayload["gamified"] = appliedReward
-      ? [{ rewardId: appliedReward._id, rewardType: appliedReward.rewardType }]
-      : isSpinDiscountApplied && spinDiscount > 0 && spinReward?.rewardId
-        ? [{ rewardId: spinReward.rewardId, rewardType: spinReward.rewardType ?? "discountSpin" }]
-        : [];
+  const handleCheckout = async () => {
+    // Combine every opted-in reward — cart toggles (session storage) and
+    // dashboard selections — into one deduped gamified payload.
+    const gamified: CreateOrderPayload["gamified"] = buildGamifiedPayload({
+      rewardsToUse,
+      selectedRewards,
+      spinRewardId: userEligibles?.discountSpin?.reward?.rewardId,
+      freeDeliveryReward: getFreeDeliveryReward(),
+      promoReward: getPromoReward(),
+    });
 
-    const payload: CreateOrderPayload = {
+    const createOrderPayload: CreateOrderPayload = {
       deliveryDetails: customerAddress,
       deliveryFee,
       serviceFee,
@@ -87,7 +94,20 @@ function CheckoutPageContent() {
       gamified,
     };
 
-    return mutate(payload);
+    try {
+      // Tell the backend about every reward being used, not just the first.
+      await Promise.all(
+        gamified.map((reward) =>
+          userService.useClaimedGamification({
+            kind: reward.rewardType,
+            orderId: reward.rewardId,
+          }),
+        ),
+      );
+      return mutate(createOrderPayload);
+    } catch (error) {
+      toast({ variant: "error", title: handleError(error) });
+    }
   };
 
   return (
@@ -321,212 +341,27 @@ function CheckoutPageContent() {
       </nav>
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-10 space-y-8">
-        <div className="bg-white border text-center md:text-left border-[#f0f9e1] rounded-lg shadow-sm overflow-hidden p-6 md:p-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
-            <h2 className="text-[20px] font-bold text-gray-800">Customer Details</h2>
-            <button
-              onClick={() => setIsEditCustomerModalOpen(true)}
-              className="text-[#8cc629] text-[13px] font-medium flex items-center gap-1 hover:underline"
-            >
-              Edit Customer Address <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+        <UserCheckoutDetails
+          user={user}
+          customerAddress={customerAddress}
+          customerPhone={customerPhone}
+          selectedDeliveryDate={selectedDeliveryDate}
+          onEditCustomer={() => setIsEditCustomerModalOpen(true)}
+          onEditPhone={() => setIsAddPhoneModalOpen(true)}
+          onPickDate={() => setIsDatePickerOpen(true)}
+        />
 
-          <div className="space-y-4 mb-6">
-            {user && (
-              <div className="flex items-center gap-3">
-                <User className="text-[#8cc629] w-4.5 h-4.5" />
-                <span className="text-gray-700 text-sm">{`${user.firstName} ${user.lastName}`}</span>
-              </div>
-            )}
-            <div className="flex items-start gap-3">
-              <MapPin className="text-[#8cc629] w-4.5 h-4.5 mt-0.5" />
-              <span className="text-gray-700 text-sm">{customerAddress}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Phone className="text-[#8cc629] w-4.5 h-4.5" />
-              {user?.phoneNumber ? (
-                <div className="flex flex-row items-center gap-1">
-                  <span className="text-gray-700 text-sm font-medium">
-                    {customerPhone || user?.phoneNumber}
-                  </span>
-                  <button type="button" onClick={() => setIsAddPhoneModalOpen(true)}>
-                    <Edit className="w-4 h-4 text-[#8cc629]" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setIsAddPhoneModalOpen(true)}
-                  className="text-[#8cc629] font-medium text-sm hover:underline"
-                >
-                  Add Phone number
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-[#fff5f5] text-[#ff8080] py-3 px-5 rounded-md text-[13px] font-medium inline-block w-full">
-            Ensure numbers are reachable at delivery to avoid cancellation or extra fees
-          </div>
-        </div>
-
-        <div className="bg-white border border-[#f0f9e1] rounded-lg shadow-sm overflow-hidden p-6 md:p-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
-            <h2 className="text-[20px] font-bold text-gray-800">Delivery Details</h2>
-            <button
-              onClick={() => setIsDatePickerOpen(true)}
-              className="text-[#8cc629] text-[13px] font-medium flex items-center gap-1 hover:underline"
-            >
-              Set a date from today upward <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {selectedDeliveryDate ? (
-            <div className="border border-[#8cc629] bg-[#f4faee] rounded-md py-6 flex flex-col items-center justify-center text-center">
-              <p className="text-gray-800 font-bold mb-1.5">
-                {selectedDeliveryDate.toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-              <p className="text-gray-500 text-xs">Door Delivery</p>
-            </div>
-          ) : (
-            <div className="border border-dashed border-[#e6e6e6] bg-[#fafafa] rounded-md py-8 flex flex-col items-center justify-center text-center">
-              <p className="text-gray-700 text-sm font-medium mb-1.5">
-                Select a day upward from today
-              </p>
-              <p className="text-gray-400 text-xs shadow-sm">Door Delivery</p>
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white border border-[#f0f9e1] rounded-lg shadow-sm overflow-hidden p-6 md:p-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
-            <h2 className="text-[20px] font-bold text-gray-800">Items Charges</h2>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center text-gray-500 text-[14px]">
-              <span>Subtotal</span>
-              <CheckoutTotal type="subtotal" />
-              {/* <span className="font-bold text-gray-800">
-                ₦{subtotal.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
-              </span> */}
-            </div>
-            <div className="flex justify-between items-center text-gray-500 text-[14px]">
-              <span>Delivery Charge</span>
-              <CheckoutTotal type="deliveryCharge" />
-              {/* <span className="font-bold text-gray-800">
-                ₦{deliveryCharge.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
-              </span> */}
-            </div>
-            <div className="flex justify-between items-center text-gray-500 text-[14px] mb-4">
-              <span>Service Charge</span>
-              <CheckoutTotal type="serviceCharge" />
-              {/* <span className="font-bold text-gray-800">
-                ₦{serviceCharge.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
-              </span> */}
-            </div>
-
-            {spinDiscount > 0 && (
-              <div className="flex justify-between items-center text-gray-500 text-[14px] mb-4">
-                <span>Spin &amp; Win Discount</span>
-                <CheckoutTotal type="discount" />
-              </div>
-            )}
-
-            <div className="flex justify-between items-center pt-5 border-t border-gray-100">
-              <span className="font-bold text-gray-800 text-[15px]">Total</span>
-              <CheckoutTotal type="total" />
-              {/* <span className="font-black text-gray-800 text-lg">
-                  ₦{total.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
-                </span> */}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-100 rounded-lg shadow-sm pb-6">
-          <div className="px-6 md:px-8 py-5 border-b border-gray-100 mb-6">
-            <h2 className="text-[18px] font-bold text-gray-800">Payment Options</h2>
-          </div>
-
-          <div className="px-6 md:px-8">
-            <div className="flex max-w-85 border border-gray-100 rounded-lg h-32.5">
-              <div
-                onClick={() => setPaymentOption("wallet")}
-                className={`flex-1 flex flex-col items-center justify-center border-r border-gray-100 cursor-pointer transition-colors ${paymentOption === "wallet" ? "bg-white" : "bg-gray-50"}`}
-              >
-                <span
-                  className={`text-2xl font-bold mb-1 ${paymentOption === "wallet" ? "text-[#8cc629]" : "text-gray-400"}`}
-                >
-                  {formatCurrency(user?.virtualAccount?.walletbalance ?? 0)}
-                </span>
-
-                <span className="text-[12px] text-gray-800 mb-4 font-medium">Wallet Balance</span>
-                <div
-                  className={`w-4.5 h-4.5 rounded-full flex items-center justify-center ${paymentOption === "wallet" ? "border-4 border-[#8cc629]" : "border border-gray-300"}`}
-                >
-                  {paymentOption === "wallet" && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#8cc629]"></div>
-                  )}
-                </div>
-              </div>
-
-              {/* <div
-                  onClick={() => setPaymentOption("online")}
-                  className={`flex-1 flex flex-col items-center justify-center cursor-pointer transition-colors ${paymentOption === "online" ? "bg-white" : "bg-gray-50"}`}
-                >
-                  <CreditCard
-                    className={`w-6 h-6 mb-1 ${paymentOption === "online" ? "text-gray-700" : "text-gray-400"}`}
-                  />
-                  <span className="text-[11px] font-medium text-gray-800 mb-2">Transfer</span>
-                  <span className="text-[12px] text-gray-800 mb-4 font-medium">Pay Online</span>
-                  <div
-                    className={`w-4.5 h-4.5 rounded-full flex items-center justify-center ${paymentOption === "online" ? "border-4 border-[#8cc629]" : "border border-gray-300"}`}
-                  >
-                    {paymentOption === "online" && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#8cc629]"></div>
-                    )}
-                  </div>
-                </div> */}
-            </div>
-          </div>
-        </div>
-
-        {/* {user?.accountType === "flexible" && (
-          <div className="bg-[#f0f9e1] rounded-lg p-5 px-6 flex justify-between items-center transition-opacity">
-            <span className="text-[#1e293b] text-[15px] font-bold">Purchase Outright</span>
-            <button
-              onClick={() => setPurchaseOutright((prev) => !prev)}
-              className={`w-11 h-6 rounded-full relative flex items-center p-1 transition-colors duration-300 ease-in-out ${purchaseOutright ? "bg-[#8cc629]" : "bg-gray-200"}`}
-            >
-              <span
-                className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${purchaseOutright ? "translate-x-5" : "translate-x-0"}`}
-              ></span>
-            </button>
-          </div>
-        )} */}
-
-        {user?.accountType === "outright" && (
-          <button
-            type="button"
-            disabled={orderIsCreating || !customerAddress || (!user?.phoneNumber && !customerPhone)}
-            onClick={handleCheckout}
-            className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white py-4.5 rounded-md font-bold text-[13px] tracking-wider transition-colors mt-6 uppercase flex justify-center items-center disabled:opacity-50"
-          >
-            {orderIsCreating ? (
-              <>
-                <Loader2 className="size-5 animate-spin" />
-                Please wait...
-              </>
-            ) : (
-              "Confirm Checkout"
-            )}
-          </button>
-        )}
+        <CheckoutPaymentDetails
+          accountType={user?.accountType}
+          walletBalance={user?.virtualAccount?.walletbalance ?? 0}
+          paymentOption={paymentOption}
+          onPaymentOptionChange={setPaymentOption}
+          orderIsCreating={orderIsCreating}
+          isConfirmDisabled={
+            orderIsCreating || !customerAddress || (!user?.phoneNumber && !customerPhone)
+          }
+          onConfirmCheckout={handleCheckout}
+        />
       </main>
 
       <Footer />

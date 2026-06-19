@@ -8,26 +8,7 @@ import { userService } from "@/lib/services/user.service";
 import { handleError } from "@/lib/handle-error";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import LoaderSection from "@/components/ui/Loader";
-import type { SpinFunction, UserResponse } from "@/types/user";
-
-interface CartTotalProps {
-  /** Whether the totals are still resolving (fees / first-order checks). */
-  isLoading: boolean;
-  subtotal: number;
-  deliveryCharge: number;
-  serviceCharge: number;
-  /** Total after any applied discount. */
-  total: number;
-  spinDiscount: number;
-  /** The won Spin & Win reward, if one exists in storage. */
-  spinnedReward: SpinFunction | null;
-  isSpinDiscountApplied: boolean;
-  onToggleSpinDiscount: (value: boolean) => void;
-  accountType: UserResponse["accountType"] | undefined;
-  /** Whether to show the promo-code card. */
-  canUsePromoCode: boolean;
-  onProceedToCheckout: () => void;
-}
+import { CartTotalProps } from "@/types/user";
 
 export default function CartTotal({
   isLoading,
@@ -35,16 +16,13 @@ export default function CartTotal({
   deliveryCharge,
   serviceCharge,
   total,
-  spinDiscount,
-  spinnedReward,
-  isSpinDiscountApplied,
-  onToggleSpinDiscount,
+  rewardToggles,
   accountType,
   canUsePromoCode,
   onProceedToCheckout,
 }: CartTotalProps) {
   const { toast } = useToast();
-  const [couponCode, setCouponCode] = useState<string>("");
+  const [promoCode, setPromoCode] = useState<string>("");
   const [isInstructionAgreed, setIsInstructionAgreed] = useState<boolean>(false);
 
   const { isPending, mutate } = useMutation({
@@ -81,33 +59,33 @@ export default function CartTotal({
               <span className="font-bold text-gray-800">₦{serviceCharge.toLocaleString()}.00</span>
             </div>
 
-            {spinnedReward && (
-              <>
+            {rewardToggles.map((reward) => (
+              <div key={reward.type} className="space-y-4">
                 <div className="flex items-center justify-between gap-3 rounded-md bg-[#f9fdf4] border border-[#e2f0cc] px-3 py-2.5">
-                  <span className="text-sm font-medium text-gray-700">Apply Spin &amp; Win reward</span>
+                  <span className="text-sm font-medium text-gray-700">{reward.label}</span>
                   <button
                     type="button"
                     role="switch"
-                    aria-checked={isSpinDiscountApplied}
-                    onClick={() => onToggleSpinDiscount(!isSpinDiscountApplied)}
-                    className={`relative h-6 w-11 shrink-0 rounded-full p-1 transition-colors duration-300 ${isSpinDiscountApplied ? "bg-[#8cc629]" : "bg-gray-200"}`}
+                    aria-checked={reward.isApplied}
+                    onClick={() => reward.onToggle(!reward.isApplied)}
+                    className={`relative h-6 w-11 shrink-0 rounded-full p-1 transition-colors duration-300 ${reward.isApplied ? "bg-[#8cc629]" : "bg-gray-200"}`}
                   >
                     <span
-                      className={`block size-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${isSpinDiscountApplied ? "translate-x-5" : "translate-x-0"}`}
+                      className={`block size-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${reward.isApplied ? "translate-x-5" : "translate-x-0"}`}
                     />
                   </button>
                 </div>
 
-                {isSpinDiscountApplied && (
+                {reward.isApplied && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Spin &amp; Win Discount</span>
+                    <span className="text-gray-500">{reward.discountLabel}</span>
                     <span className="font-bold text-[#8cc629]">
-                      −₦{spinDiscount.toLocaleString()}.00
+                      −₦{reward.discount.toLocaleString()}.00
                     </span>
                   </div>
                 )}
-              </>
-            )}
+              </div>
+            ))}
 
             <div className="pt-4 border-t border-gray-100 flex justify-between">
               <span className="font-bold text-gray-800">Total</span>
@@ -212,15 +190,15 @@ export default function CartTotal({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (!couponCode) return;
-              mutate({ promoCode: couponCode, orderAmount: total });
+              if (!promoCode) return;
+              mutate({ promoCode: promoCode, orderAmount: total });
             }}
             className="p-6"
           >
             <input
               type="text"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
               placeholder="Enter your promo code"
               className="w-full px-4 py-3 border border-gray-200 rounded-md text-sm mb-4 focus:outline-none focus:border-[#8cc629]"
             />

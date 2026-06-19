@@ -93,7 +93,6 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
       status: wonItem.isActive ? "active" : "",
       discountSpinBonus: wonItem.scope === "Fixed Amount" ? wonItem.value : undefined,
       discountSpinDiscount: isDiscount ? wonItem.value : undefined,
-      // promoCodeDetails: undefined,
     };
 
     claimMutation(payload);

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { Gift, ArrowRight, X, Loader2 } from "lucide-react";
+import { Gift, ArrowRight, X, Loader2, Check } from "lucide-react";
 import { useGetRewardHistory } from "@/lib/queries";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import { useRewardStore } from "@/store/useRewardStore";
@@ -37,20 +37,28 @@ export default function RewardHistoryPage() {
   const { data: rewardHistoryData, isLoading: rewardHistoryLoading } = useGetRewardHistory();
   const [selectedReward, setSelectedReward] = useState<RewardHistory | null>(null);
   const { toast } = useToast();
-  const setAppliedReward = useRewardStore((state) => state.setAppliedReward);
+  const selectedRewards = useRewardStore((state) => state.selectedRewards);
+  const toggleSelectedReward = useRewardStore((state) => state.toggleSelectedReward);
 
   const rewards = rewardHistoryData?.items ?? [];
   const hasRewards = rewards.length > 0;
 
+  const isRewardSelected = (reward: RewardHistory) =>
+    selectedRewards.some((r) => r._id === reward._id);
+
   const closeModal = () => setSelectedReward(null);
 
-  // Selecting a reward stores it for the next checkout, where it is actually
-  // consumed (via the order's gamified payload) and then cleared.
-  const handleUseReward = (reward: RewardHistory) => {
-    setAppliedReward(reward);
+  // Selecting a reward stores it for the next checkout, where it is consumed
+  // (via the order's gamified payload) and then cleared. Toggling again
+  // de-selects it. Multiple rewards can be selected at once.
+  const handleToggleReward = (reward: RewardHistory) => {
+    const wasSelected = isRewardSelected(reward);
+    toggleSelectedReward(reward);
     toast({
       variant: "success",
-      title: "Reward selected — it will be applied at your next checkout",
+      title: wasSelected
+        ? "Reward removed from your next checkout"
+        : "Reward selected — it will be applied at your next checkout",
     });
     closeModal();
   };
@@ -118,12 +126,19 @@ export default function RewardHistoryPage() {
                       {formatDate(reward.wonOn)}
                     </td>
                     <td className="py-4 px-6 text-sm text-right">
-                      <button
-                        onClick={() => setSelectedReward(reward)}
-                        className="text-[#8cc629] font-medium hover:text-[#7ab824] inline-flex items-center gap-1 transition-colors"
-                      >
-                        View Details <ArrowRight className="size-4" />
-                      </button>
+                      <div className="inline-flex items-center gap-3">
+                        {isRewardSelected(reward) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5e9] px-2.5 py-1 text-xs font-semibold text-[#2a9d5c]">
+                            <Check className="size-3" /> Selected
+                          </span>
+                        )}
+                        <button
+                          onClick={() => setSelectedReward(reward)}
+                          className="text-[#8cc629] font-medium hover:text-[#7ab824] inline-flex items-center gap-1 transition-colors"
+                        >
+                          View Details <ArrowRight className="size-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -143,7 +158,14 @@ export default function RewardHistoryPage() {
                 </div>
 
                 <div className="flex justify-between items-center mt-3">
-                  <StatusBadge status={reward.status} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={reward.status} />
+                    {isRewardSelected(reward) && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5e9] px-2 py-0.5 text-[10px] font-semibold text-[#2a9d5c]">
+                        <Check className="size-3" /> Selected
+                      </span>
+                    )}
+                  </div>
 
                   <button
                     onClick={() => setSelectedReward(reward)}
@@ -215,15 +237,23 @@ export default function RewardHistoryPage() {
                 </div>
               </div>
 
-              {/* Use button — only for active rewards */}
-              {isActiveStatus(selectedReward.status) && (
-                <button
-                  onClick={() => handleUseReward(selectedReward)}
-                  className="mt-6 w-full bg-[#8cc629] hover:bg-[#7ab824] text-white font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  Use Reward
-                </button>
-              )}
+              {/* Use / Remove toggle — only for active rewards */}
+              {isActiveStatus(selectedReward.status) &&
+                (isRewardSelected(selectedReward) ? (
+                  <button
+                    onClick={() => handleToggleReward(selectedReward)}
+                    className="mt-6 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                  >
+                    Remove from Checkout
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleToggleReward(selectedReward)}
+                    className="mt-6 w-full bg-[#8cc629] hover:bg-[#7ab824] text-white font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                  >
+                    Use Reward
+                  </button>
+                ))}
             </div>
           </div>
         </div>

@@ -74,15 +74,31 @@ export function getPromoDiscount(reward: RewardHistory | null, total: number): n
  * Discount a dashboard-selected reward (a RewardHistory) grants, dispatched by
  * its reward type:
  * - freeDelivery: waives the delivery fee.
- * - discountSpin / promoCode: the reward's numeric `discountSpinDiscount`.
+ * - discountSpin: could be a fixed amount deduction or percentage discount.
+ * - promoCode: could be anything.
  */
 export function getRewardHistoryDiscount(
   reward: RewardHistory,
   { deliveryFee, total }: { deliveryFee: number; total: number },
 ): number {
   const type = reward.rewardType ?? reward.source;
-  if (type === "freeDelivery") return Math.min(Math.max(deliveryFee, 0), total);
-  return Math.min(Math.max(reward.discountSpinDiscount ?? 0, 0), total);
+
+  switch (type) {
+    case "freeDelivery": {
+      return Math.min(Math.max(deliveryFee, 0), total);
+    }
+
+    case "discountSpin": {
+      return Math.min(Math.max(reward.discountSpinDiscount ?? 0, 0), total);
+    }
+
+    case "promoCode": {
+      return Math.min(Math.max(reward.promoCodeDetails.amount ?? 0, 0), total);
+    }
+
+    default:
+      return 0;
+  }
 }
 
 export interface GamifiedItem {
@@ -112,12 +128,17 @@ export function buildGamifiedPayload({
   const byType = new Map<GamificationRewardType, GamifiedItem>();
 
   // 1) Cart toggles.
-  if (rewardsToUse.discountSpin && spinRewardId)
+  if (rewardsToUse.discountSpin && spinRewardId) {
     byType.set("discountSpin", { rewardId: spinRewardId, rewardType: "discountSpin" });
-  if (rewardsToUse.freeDelivery && freeDeliveryReward)
+  }
+
+  if (rewardsToUse.freeDelivery && freeDeliveryReward) {
     byType.set("freeDelivery", { rewardId: freeDeliveryReward._id, rewardType: "freeDelivery" });
-  if (rewardsToUse.promoCode && promoReward)
+  }
+
+  if (rewardsToUse.promoCode && promoReward) {
     byType.set("promoCode", { rewardId: promoReward._id, rewardType: "promoCode" });
+  }
 
   // 2) Dashboard selections (override cart toggles of the same type).
   for (const reward of selectedRewards) {

@@ -3,12 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/lib/services/user.service";
 import { handleError } from "@/lib/handle-error";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import LoaderSection from "@/components/ui/Loader";
 import { CartTotalProps } from "@/types/user";
+import { setToStorage } from "@/lib/auth-utils";
+import { queryKeys } from "@/lib/queries";
 
 export default function CartTotal({
   isLoading,
@@ -16,7 +18,6 @@ export default function CartTotal({
   deliveryCharge,
   serviceCharge,
   total,
-  rewardToggles,
   accountType,
   canUsePromoCode,
   onProceedToCheckout,
@@ -24,11 +25,16 @@ export default function CartTotal({
   const { toast } = useToast();
   const [promoCode, setPromoCode] = useState<string>("");
   const [isInstructionAgreed, setIsInstructionAgreed] = useState<boolean>(false);
+  const queryClient = useQueryClient();
 
   const { isPending, mutate } = useMutation({
     mutationFn: userService.validatePromoCode,
-    onSuccess: (data) => {
-      console.log(data);
+    onSuccess: async ({ message, data }) => {
+      await queryClient.invalidateQueries({
+        queryKey: [queryKeys.gamification, queryKeys.rewardHistory],
+      });
+      setToStorage("PROMO_CODE", JSON.stringify(data.rewardHistory.promoCodeDetails));
+      toast({ variant: "success", title: message });
     },
     onError: (error) => {
       toast({ variant: "error", title: handleError(error) });
@@ -58,34 +64,6 @@ export default function CartTotal({
               <span className="text-gray-500">Service Charge</span>
               <span className="font-bold text-gray-800">₦{serviceCharge.toLocaleString()}.00</span>
             </div>
-
-            {rewardToggles.map((reward) => (
-              <div key={reward.type} className="space-y-4">
-                <div className="flex items-center justify-between gap-3 rounded-md bg-[#f9fdf4] border border-[#e2f0cc] px-3 py-2.5">
-                  <span className="text-sm font-medium text-gray-700">{reward.label}</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={reward.isApplied}
-                    onClick={() => reward.onToggle(!reward.isApplied)}
-                    className={`relative h-6 w-11 shrink-0 rounded-full p-1 transition-colors duration-300 ${reward.isApplied ? "bg-[#8cc629]" : "bg-gray-200"}`}
-                  >
-                    <span
-                      className={`block size-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${reward.isApplied ? "translate-x-5" : "translate-x-0"}`}
-                    />
-                  </button>
-                </div>
-
-                {reward.isApplied && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">{reward.discountLabel}</span>
-                    <span className="font-bold text-[#8cc629]">
-                      −₦{reward.discount.toLocaleString()}.00
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
 
             <div className="pt-4 border-t border-gray-100 flex justify-between">
               <span className="font-bold text-gray-800">Total</span>

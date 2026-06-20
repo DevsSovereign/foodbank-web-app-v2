@@ -270,7 +270,7 @@ export interface RewardHistory {
   displayLabel: string;
   issuedAt: string;
   presentationSeen: boolean;
-  promoCodeDetails: string;
+  promoCodeDetails: { amount: number; code: string; discount: number | null };
   source: GamificationRewardType;
   usedAt: string;
 }
@@ -399,12 +399,17 @@ export interface UserGamification {
   serverTimeMs: number;
 }
 
+export type GamificationScope =
+  | "Fixed Amount"
+  | "5% discount on all pruchase"
+  | "Percentage discount";
+
 export interface SpinScope {
   adminId: string;
   createdAt: string;
   image: string;
   isActive: boolean;
-  scope: "Fixed Amount" | "5% discount on all pruchase" | "Percentage discount";
+  scope: GamificationScope;
   updatedAt: string;
   value: number;
   _id: string;
@@ -465,10 +470,22 @@ export interface CartTotalProps {
   serviceCharge: number;
   /** Total after any applied discounts. */
   total: number;
-  /** Toggleable rewards the user has won (spin, free delivery, promo). */
-  rewardToggles: RewardToggle[];
   accountType: UserResponse["accountType"] | undefined;
   /** Whether to show the promo-code card. */
   canUsePromoCode: boolean;
   onProceedToCheckout: () => void;
+}
+
+export interface PromoCodeResponse {
+  campaign: string;
+  customerInfo: null;
+  description: string;
+  expiresAt: number;
+  image: string;
+  minimumOrderValue: number;
+  scope: GamificationScope;
+  startsAt: number;
+  targetAudience: string;
+  value: number;
+  rewardHistory: RewardHistory;
 }

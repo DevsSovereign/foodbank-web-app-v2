@@ -20,21 +20,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import SubHeader from "@/components/sub-header";
 import useUserLocation from "@/hooks/useUserLocation";
 import { useUserStore } from "@/store/useUserStore";
-import {
-  getSpinDiscount,
-  getFreeDeliveryDiscount,
-  getPromoDiscount,
-  getSpinnedReward,
-  getFreeDeliveryReward,
-  getPromoReward,
-} from "@/lib/gamification";
 import CartTotal from "./cart-totals/CartTotal";
 import ShoppingCart from "./shopping-cart/ShoppingCart";
-import { RewardToggle } from "@/types/user";
 
 export default function CartPage() {
-  const { user, userEligibles, adminGamifiedEnabled, rewardsToUse, toggleRewardToUse } =
-    useUserStore();
+  const { user, userEligibles, adminGamifiedEnabled } = useUserStore();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const router = useRouter();
   const token = getAuthToken();
@@ -51,9 +41,6 @@ export default function CartPage() {
   });
   const { customerState } = useUserLocation({ isDetectAddress: true });
   const queryClient = useQueryClient();
-  const spinnedReward = getSpinnedReward();
-  const freeDeliveryReward = getFreeDeliveryReward();
-  const promoCodeReward = getPromoReward();
 
   const locationFee = useMemo(() => {
     return allFeesResponse?.allfees?.find((fee) => {
@@ -74,43 +61,7 @@ export default function CartPage() {
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const deliveryCharge = applicableFee?.deliveryFee || 4000;
   const serviceCharge = applicableFee?.serviceFee || 500; // default service charge;
-  const grossTotal = subtotal + deliveryCharge + serviceCharge;
-
-  /** compute gamification array toggles from session storage, if it exists */
-  const rewardToggles: RewardToggle[] = [
-    spinnedReward && {
-      type: "discountSpin" as const,
-      label: "Apply Spin & Win reward",
-      discountLabel: "Spin & Win Discount",
-      discount: getSpinDiscount(spinnedReward, grossTotal),
-      isApplied: rewardsToUse.discountSpin,
-      onToggle: (value: boolean) => toggleRewardToUse("discountSpin", value),
-    },
-    freeDeliveryReward && {
-      type: "freeDelivery" as const,
-      label: "Apply Free Delivery reward",
-      discountLabel: "Free Delivery Discount",
-      discount: getFreeDeliveryDiscount(freeDeliveryReward, deliveryCharge),
-      isApplied: rewardsToUse.freeDelivery,
-      onToggle: (value: boolean) => toggleRewardToUse("freeDelivery", value),
-    },
-    promoCodeReward && {
-      type: "promoCode" as const,
-      label: "Apply Promo Code reward",
-      discountLabel: "Promo Code Discount",
-      discount: getPromoDiscount(promoCodeReward, grossTotal),
-      isApplied: rewardsToUse.promoCode,
-      onToggle: (value: boolean) => toggleRewardToUse("promoCode", value),
-    },
-  ].filter((reward): reward is RewardToggle => Boolean(reward));
-
-  /**Sum only the discounts the user has toggled on from the session storage computed gamification, capped at the gross total.*/
-  const totalDiscount = Math.min(
-    rewardToggles.reduce((acc, reward) => (reward.isApplied ? acc + reward.discount : acc), 0),
-    grossTotal,
-  );
-
-  const total = grossTotal - totalDiscount;
+  const total = subtotal + deliveryCharge + serviceCharge;
 
   const isEmpty = cartItems.length === 0;
 
@@ -270,7 +221,6 @@ export default function CartPage() {
               deliveryCharge={deliveryCharge}
               serviceCharge={serviceCharge}
               total={total}
-              rewardToggles={rewardToggles}
               accountType={user?.accountType}
               canUsePromoCode={
                 user?.accountType === "outright" &&

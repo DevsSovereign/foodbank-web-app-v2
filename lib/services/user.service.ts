@@ -16,6 +16,7 @@ import {
   ClaimRewardResponse,
   RewardHistory,
   UsedClaimResponse,
+  PromoCodeResponse,
 } from "@/types/user";
 import { apiClient } from "../api-client";
 
@@ -119,6 +120,7 @@ export const userService = {
     orderId,
   }: {
     kind: GamificationRewardType;
+    /**ID of the reward*/
     orderId: string;
   }) {
     const res = await apiClient.post<{ message: string; data: UsedClaimResponse }>(
@@ -132,10 +134,10 @@ export const userService = {
   },
 
   async validatePromoCode({ promoCode, orderAmount }: { promoCode: string; orderAmount: number }) {
-    const res = await apiClient.post<{ data: { _id: string } }>(
+    const res = await apiClient.post<{ data: PromoCodeResponse; message: string }>(
       "/user/gamification/promo-code/validate",
       { promoCode, orderAmount },
     );
-    return res.data;
+    return res;
   },
 };

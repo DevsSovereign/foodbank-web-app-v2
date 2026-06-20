@@ -241,11 +241,14 @@ export const useGetRewardHistory = () => {
 };
 
 export const useGetSpinItems = () => {
+  const token = getAuthToken();
+
   const queryResult = useQuery({
     queryKey: [queryKeys.spinItems],
     queryFn: async () => {
       return await userService.getSpinItems();
     },
+    enabled: !!token,
   });
 
   return queryResult;

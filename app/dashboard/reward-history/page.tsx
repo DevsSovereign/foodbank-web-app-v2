@@ -48,9 +48,9 @@ export default function RewardHistoryPage() {
 
   const closeModal = () => setSelectedReward(null);
 
-  // Selecting a reward stores it for the next checkout, where it is consumed
-  // (via the order's gamified payload) and then cleared. Toggling again
-  // de-selects it. Multiple rewards can be selected at once.
+  /** Note: Selecting a reward stores it for the next checkout, where it is consumed
+  (via the order's gamified payload) and then cleared. Toggling again
+  de-selects it. Multiple rewards can be selected at once. */
   const handleToggleReward = (reward: RewardHistory) => {
     const wasSelected = isRewardSelected(reward);
     toggleSelectedReward(reward);
@@ -219,12 +219,14 @@ export default function RewardHistoryPage() {
                     {selectedReward.displayLabel || selectedReward.reward}
                   </span>
                 </div>
-                <div className="flex justify-between items-center border-b border-[#e2efe6] pb-4">
-                  <span className="text-[#2a9d5c] text-[13px] font-medium">Order:</span>
-                  <span className="text-gray-800 text-[13px] font-medium">
-                    {selectedReward.order}
-                  </span>
-                </div>
+                {selectedReward.order && (
+                  <div className="flex justify-between items-center border-b border-[#e2efe6] pb-4">
+                    <span className="text-[#2a9d5c] text-[13px] font-medium">Order:</span>
+                    <span className="text-gray-800 text-[13px] font-medium">
+                      {selectedReward.order}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center border-b border-[#e2efe6] pb-4">
                   <span className="text-[#2a9d5c] text-[13px] font-medium">Won On:</span>
                   <span className="text-gray-800 text-[13px] font-medium">
@@ -235,6 +237,14 @@ export default function RewardHistoryPage() {
                   <span className="text-[#2a9d5c] text-[13px] font-medium">Status:</span>
                   <StatusBadge status={selectedReward.status} />
                 </div>
+                {selectedReward.status === "used" && (
+                  <div className="flex justify-between items-center border-b border-[#e2efe6] pb-4">
+                    <span className="text-[#2a9d5c] text-[13px] font-medium">Used On:</span>
+                    <span className="text-gray-800 text-[13px] font-medium">
+                      {formatDate(selectedReward.usedAt)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Use / Remove toggle — only for active rewards */}

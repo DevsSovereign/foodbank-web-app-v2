@@ -29,6 +29,7 @@ import { buildGamifiedPayload, getFreeDeliveryReward, getPromoReward } from "@/l
 function CheckoutPageContent() {
   const { user, setUser, userEligibles, rewardsToUse } = useUserStore();
   const { selectedRewards, clearSelectedRewards } = useRewardStore();
+  const [isCreatingOrder, setIsCreatingOrder] = useState<boolean>(false);
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
@@ -41,7 +42,7 @@ function CheckoutPageContent() {
     return tomorrow;
   });
   const { customerAddress, setCustomerAddress } = useUserLocation({ isDetectAddress: true });
-  const { deliveryFee, serviceFee, amountPay } = useGetCheckoutTotal();
+  const { payableDeliveryFee, serviceFee, amountPay } = useGetCheckoutTotal();
   const { toast } = useToast();
   const { refetch: refetchUser } = useGetCustomer();
   const router = useRouter();
@@ -73,8 +74,14 @@ function CheckoutPageContent() {
   });
 
   const handleCheckout = async () => {
-    // Combine every opted-in reward — cart toggles (session storage) and
-    // dashboard selections — into one deduped gamified payload.
+    if (amountPay === 0) return;
+
+    /** This is to effectively display a loading state for the use
+     * gamification promise */
+    setIsCreatingOrder(true);
+
+    /** Combine every opted-in reward — cart toggles (session storage) and
+     dashboard selections — into one unduplicated gamified payload.*/
     const gamified: CreateOrderPayload["gamified"] = buildGamifiedPayload({
       rewardsToUse,
       selectedRewards,
@@ -85,7 +92,7 @@ function CheckoutPageContent() {
 
     const createOrderPayload: CreateOrderPayload = {
       deliveryDetails: customerAddress,
-      deliveryFee,
+      deliveryFee: payableDeliveryFee,
       serviceFee,
       deliveryContact: customerPhone || (user?.phoneNumber as string),
       deliveryDateOption: selectedDeliveryDate.toISOString(),
@@ -107,6 +114,8 @@ function CheckoutPageContent() {
       return mutate(createOrderPayload);
     } catch (error) {
       toast({ variant: "error", title: handleError(error) });
+    } finally {
+      setIsCreatingOrder(false);
     }
   };
 
@@ -356,9 +365,13 @@ function CheckoutPageContent() {
           walletBalance={user?.virtualAccount?.walletbalance ?? 0}
           paymentOption={paymentOption}
           onPaymentOptionChange={setPaymentOption}
-          orderIsCreating={orderIsCreating}
+          orderIsCreating={orderIsCreating || isCreatingOrder}
           isConfirmDisabled={
-            orderIsCreating || !customerAddress || (!user?.phoneNumber && !customerPhone)
+            amountPay === 0 ||
+            orderIsCreating ||
+            isCreatingOrder ||
+            !customerAddress ||
+            (!user?.phoneNumber && !customerPhone)
           }
           onConfirmCheckout={handleCheckout}
         />

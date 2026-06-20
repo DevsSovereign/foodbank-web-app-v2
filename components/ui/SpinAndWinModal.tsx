@@ -5,7 +5,7 @@ import Image from "next/image";
 import { XCircle } from "lucide-react";
 import { useGetSpinItems } from "@/lib/queries";
 import LoaderSection from "./Loader";
-import { STORAGE_KEYS } from "@/lib/auth-utils";
+import { setToStorage } from "@/lib/auth-utils";
 import { useMutation } from "@tanstack/react-query";
 import { userService } from "@/lib/services/user.service";
 import { handleError } from "@/lib/handle-error";
@@ -34,7 +34,11 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
   // claim mutation
   const { isPending: isClaiming, mutate: claimMutation } = useMutation({
     mutationFn: userService.claimGamification,
-    onSuccess: () => onClaim(),
+    onSuccess: () => {
+      // Persist the won prize so it can be applied later.
+      setToStorage("SPINNED_ITEM", JSON.stringify(items[winnerIndex || 0]));
+      onClaim();
+    },
     onError: (error) => {
       const message = handleError(error);
       toast({ variant: "error", title: message });
@@ -76,14 +80,12 @@ export default function SpinAndWinModal({ open, onClose, onClaim }: SpinAndWinMo
     setTimeout(() => {
       setIsAnimating(false);
       setModalState("won");
-      // Persist the won prize so it can be applied/claimed later.
-      sessionStorage.setItem(STORAGE_KEYS.SPINNED_ITEM, JSON.stringify(items[winner]));
     }, 3000); // 3 seconds spinning
   };
 
   const handleOnClaim = () => {
     const wonItem = winnerIndex !== null ? items[winnerIndex].scopeId : items[0].scopeId;
-    const isDiscount = wonItem.scope.includes("discount".toLowerCase());
+    const isDiscount = wonItem.scope.toLowerCase().includes("discount");
 
     const payload: ClaimGamificationPayload = {
       orderId: wonItem._id,

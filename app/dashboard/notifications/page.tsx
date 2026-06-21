@@ -1,62 +1,81 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FileText } from "lucide-react";
 import { useGetNotifications } from "@/lib/queries";
 import ErrorSection from "@/components/ui/ErrorSection";
 import { handleError } from "@/lib/handle-error";
 import LoaderSection from "@/components/ui/Loader";
 import EmptyState from "@/components/ui/EmptyState";
+import { NotificationItem } from "@/types/user";
+
+type Tab = "Today" | "Yesterday" | "Previous";
+const TABS: Tab[] = ["Today", "Yesterday", "Previous"];
+
+function NotificationCard({ message }: NotificationItem) {
+  return (
+    <div className="flex items-start gap-4 p-4 bg-white rounded-xl border border-gray-50 hover:border-gray-100 transition-colors shadow-sm">
+      <div className="shrink-0 size-10 rounded-full bg-[#f0f7e6] flex items-center justify-center text-[#8cc629]">
+        <FileText size={20} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-sm font-bold text-gray-900">{message.title}</h3>
+          <span className="text-xs text-gray-400 whitespace-nowrap">
+            {new Date(message.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 mt-1 leading-relaxed">{message.body}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function NotificationsPage() {
-  const [activeTab, setActiveTab] = useState<"Today" | "Yesterday">("Today");
+  const [activeTab, setActiveTab] = useState<Tab>("Today");
   const {
     data: allNotifications,
     isLoading: isNotificationsLoading,
-    isRefetching: isNotificationsRefetching,
     error: notificationsError,
     refetch: refetchNotifications,
   } = useGetNotifications();
 
-  console.log(allNotifications);
+  // Response is grouped by date string keys (e.g. "Fri Feb 27 2026").
+  // Match keys against today/yesterday by actual calendar date; everything
+  // else falls under "Previous".
+  const todayKey = new Date().toDateString();
+  const yesterdayKey = (() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    return date.toDateString();
+  })();
 
-  const notifications = [
-    {
-      id: 1,
-      title: "Late Pickup Policy",
-      description:
-        "Kindly receive your order within 10 minutes of the rider's arrival to avoid a fine of ₦500 charge.",
-      time: "3:45 PM",
-      date: "Today",
-    },
-    {
-      id: 2,
-      title: "Order Created",
-      description: "Order FBD-263764 created",
-      time: "3:45 PM",
-      date: "Today",
-    },
-    {
-      id: 3,
-      title: "Order Created",
-      description: "Order FBD-263764 created",
-      time: "3:45 PM",
-      date: "Today",
-    },
-    {
-      id: 4,
-      title: "Order Created",
-      description: "Order FBD-263764 created",
-      time: "3:45 PM",
-      date: "Today",
-    },
-  ];
+  const todayItems = allNotifications?.[todayKey] ?? [];
+  const yesterdayItems = allNotifications?.[yesterdayKey] ?? [];
+  const previousGroups = useMemo(
+    () =>
+      Object.keys(allNotifications ?? {})
+        .filter((date) => date !== todayKey && date !== yesterdayKey)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+        .map((date) => ({ date, items: allNotifications?.[date] ?? [] })),
+    [allNotifications, todayKey, yesterdayKey]
+  );
 
   if (notificationsError) {
     return (
       <ErrorSection message={handleError(notificationsError)} onRetry={refetchNotifications} />
     );
   }
+
+  const hasContent =
+    activeTab === "Today"
+      ? todayItems.length > 0
+      : activeTab === "Yesterday"
+        ? yesterdayItems.length > 0
+        : previousGroups.length > 0;
 
   return (
     <div className="w-full max-w-4xl">
@@ -69,10 +88,10 @@ export default function NotificationsPage() {
 
         {/* Tabs */}
         <div className="flex gap-6 border-b border-gray-100 sm:border-none">
-          {["Today", "Yesterday"].map((tab) => (
+          {TABS.map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as "Today" | "Yesterday")}
+              onClick={() => setActiveTab(tab)}
               className={`pb-2 sm:pb-0 text-sm font-medium transition-colors relative ${
                 activeTab === tab ? "text-[#8cc629]" : "text-gray-400 hover:text-gray-600"
               }`}
@@ -91,30 +110,23 @@ export default function NotificationsPage() {
 
       {/* Notifications List */}
       <div className="space-y-4">
-        {isNotificationsLoading || isNotificationsRefetching ? (
+        {isNotificationsLoading ? (
           <LoaderSection />
-        ) : !allNotifications ? (
-          <EmptyState message="No available notification" />
+        ) : !hasContent ? (
+          <EmptyState message={`No notifications for ${activeTab.toLowerCase()}`} />
+        ) : activeTab === "Today" ? (
+          todayItems.map((item) => <NotificationCard key={item.message._id} {...item} />)
+        ) : activeTab === "Yesterday" ? (
+          yesterdayItems.map((item) => <NotificationCard key={item.message._id} {...item} />)
         ) : (
-          notifications.map((notification) => (
-            <div
-              key={notification.id}
-              className="flex items-start gap-4 p-4 bg-white rounded-xl border border-gray-50 hover:border-gray-100 transition-colors shadow-sm"
-            >
-              <div className="shrink-0 size-10 rounded-full bg-[#f0f7e6] flex items-center justify-center text-[#8cc629]">
-                <FileText size={20} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-sm font-bold text-gray-900">{notification.title}</h3>
-                  <span className="text-xs text-gray-400 whitespace-nowrap">
-                    {notification.time}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                  {notification.description}
-                </p>
-              </div>
+          previousGroups.map(({ date, items }) => (
+            <div key={date} className="space-y-4">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {date}
+              </h2>
+              {items.map((item) => (
+                <NotificationCard key={item.message._id} {...item} />
+              ))}
             </div>
           ))
         )}

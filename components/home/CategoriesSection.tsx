@@ -74,7 +74,7 @@ export default function CategoriesSection({
       <div className="mb-8 relative">
         <h2 className="text-xl md:text-2xl font-bold text-gray-800 inline-block relative z-10 pb-2">
           Categories
-          <div className="absolute bottom-0 left-0 w-full h-[3px] bg-[#6cc200]" />
+          <div className="absolute bottom-0 left-0 w-full h-0.75 bg-[#6cc200]" />
         </h2>
         <div className="absolute bottom-0 left-0 w-full h-px bg-gray-200" />
       </div>

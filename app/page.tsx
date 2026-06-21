@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 import NavBar from "@/components/home/NavBar";
@@ -14,67 +14,95 @@ import Image from "next/image";
 import SpinAndWinModal from "@/components/ui/SpinAndWinModal";
 import FreeDeliveryModal from "@/components/ui/FreeDeliveryModal";
 import LoadingBlurOverlay from "@/components/ui/LoadingBlurOverlay";
+import { useUserStore } from "@/store/useUserStore";
+import { STORAGE_KEYS } from "@/lib/auth-utils";
 
 export default function HomePage() {
-  const [isSpinModalOpen, setIsSpinModalOpen] = useState(false);
-  const [isFreeDeliveryOpen, setIsFreeDeliveryOpen] = useState(false);
-  const [isCategoriesLoading, setIsCategoriesLoading] = useState(false);
-  const [isOffersLoading, setIsOffersLoading] = useState(false);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState<boolean>(false);
+  const [isOffersLoading, setIsOffersLoading] = useState<boolean>(false);
+  const [isSpinOpen, setIsSpinOpen] = useState<boolean>(false);
+  const [isFreeDeliveryOpen, setIsFreeDeliveryOpen] = useState<boolean>(false);
+  const { userEligibles, adminGamifiedEnabled } = useUserStore();
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  const spinEligible =
+    !!adminGamifiedEnabled?.discountSpin?.enabled &&
+    !!userEligibles?.discountSpin?.eligible &&
+    !!userEligibles?.discountSpin?.showToUser;
+
+  const freeDeliveryEligible =
+    !!adminGamifiedEnabled?.freeDelivery?.enabled &&
+    !!userEligibles?.freeDelivery?.eligible &&
+    !!userEligibles?.freeDelivery?.showToUser;
+
+  // Claiming the spin reward advances to Free Delivery (if eligible).
+  const handleSpinClaim = () => {
+    const hasClaimed = !!sessionStorage.getItem(STORAGE_KEYS.FREE_DELIVERY);
+
+    setIsSpinOpen(false);
+
+    if (freeDeliveryEligible && !hasClaimed) {
       setIsFreeDeliveryOpen(true);
-    }, 7000); // 7 seconds delay for Free Delivery popup
+    }
+  };
 
-    return () => clearTimeout(timer);
-  }, []);
+  // Dismissing the spin modal (✕) closes everything — no advance.
+  const handleSpinDismiss = () => setIsSpinOpen(false);
+
+  // Open the eligible modal(s). When both are eligible, show Spin & Win first;
+  // Free Delivery is opened afterwards once Spin & Win is closed. A user who has
+  // already spun skips straight to Free Delivery.
+  useEffect(() => {
+    const hasSpun = !!sessionStorage.getItem(STORAGE_KEYS.SPINNED_ITEM);
+    const hasClaimed = !!sessionStorage.getItem(STORAGE_KEYS.FREE_DELIVERY);
+
+    if (spinEligible && !hasSpun) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsSpinOpen(true);
+    } else if (freeDeliveryEligible && !hasClaimed) {
+      setIsFreeDeliveryOpen(true);
+    }
+  }, [spinEligible, freeDeliveryEligible]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafeff] font-sans relative overflow-x-hidden">
-      <TopRibbon />
-      <Header />
-      <NavBar />
+    <>
+      <div className="min-h-screen flex flex-col bg-[#fafeff] font-sans relative overflow-x-hidden">
+        <TopRibbon />
+        <Header />
+        <NavBar />
 
-      <main className="flex-1 relative">
-        <LoadingBlurOverlay isActive={isCategoriesLoading || isOffersLoading} />
-        <div className="absolute top-75 left-0 pointer-events-none z-0 hidden lg:block w-10 h-50">
-          <Image
-            src="/assets/left.png"
-            alt="side-banner"
-            fill
-            className="object-contain object-left"
-          />
-        </div>
-        <div className="absolute top-125 right-0 pointer-events-none z-0 hidden lg:block w-10 h-50">
-          <Image
-            src="/assets/right.png"
-            alt="decorative right-side background accent"
-            fill
-            className="object-contain object-right"
-          />
-        </div>
+        <main className="flex-1 relative">
+          <LoadingBlurOverlay isActive={isCategoriesLoading || isOffersLoading} />
+          <div className="absolute top-75 left-0 pointer-events-none z-0 hidden lg:block w-10 h-50">
+            <Image
+              src="/assets/left.png"
+              alt="side-banner"
+              fill
+              className="object-contain object-left"
+            />
+          </div>
+          <div className="absolute top-125 right-0 pointer-events-none z-0 hidden lg:block w-10 h-50">
+            <Image
+              src="/assets/right.png"
+              alt="decorative right-side background accent"
+              fill
+              className="object-contain object-right"
+            />
+          </div>
 
-        <HeroSection />
-        <TrustBadges />
-        <CategoriesSection onLoadingChange={setIsCategoriesLoading} />
-        <SpecialOffers onLoadingChange={setIsOffersLoading} />
-        <PromoBanners />
-      </main>
+          <HeroSection />
+          <TrustBadges />
+          <CategoriesSection onLoadingChange={setIsCategoriesLoading} />
+          <SpecialOffers onLoadingChange={setIsOffersLoading} />
+          <PromoBanners />
+        </main>
 
-      <Footer />
+        <Footer />
+      </div>
 
-      {/* <SpinAndWinModal isOpen={isSpinModalOpen} onClose={() => setIsSpinModalOpen(false)} />
+      {/* gamification modals — Spin & Win shows first, then Free Delivery */}
+      <SpinAndWinModal open={isSpinOpen} onClose={handleSpinDismiss} onClaim={handleSpinClaim} />
 
-      <FreeDeliveryModal
-        isOpen={isFreeDeliveryOpen}
-        onClose={() => {
-          setIsFreeDeliveryOpen(false);
-          // Slight delay to allow Free Delivery to fade out before Spin & Win fades in
-          setTimeout(() => {
-            setIsSpinModalOpen(true);
-          }, 500);
-        }}
-      /> */}
-    </div>
+      <FreeDeliveryModal open={isFreeDeliveryOpen} onClose={() => setIsFreeDeliveryOpen(false)} />
+    </>
   );
 }

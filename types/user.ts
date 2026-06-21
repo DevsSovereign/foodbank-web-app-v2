@@ -8,12 +8,14 @@ export type OrderHistoryStatus =
 
 export type SingleOrderHistoryStatus = "completed" | "cancelled" | "outForDelivery";
 
+export interface LinkedBankInstitution {
+  name: string;
+  branch: string;
+  bank_code: string;
+}
+
 export interface UserLinkedBank {
-  institution: {
-    name: string;
-    branch: string;
-    bank_code: string;
-  };
+  institution: LinkedBankInstitution;
   account_name: string;
   account_number: string;
   account_type: string;
@@ -24,6 +26,46 @@ export interface UserLinkedBank {
   _id: string;
   id: string;
 }
+
+export interface EmandateValidation {
+  isMandateOrder: boolean;
+  isMandatePayment: boolean;
+}
+
+export interface EmployedData {
+  workIDCard: [];
+  salaryAccounts: [];
+}
+
+export interface SelfEmployedData {
+  businessAccounts: [];
+}
+
+export interface StudentData {
+  studentIdCard: [];
+  accounts: [];
+}
+
+export interface StateGovernmentData {
+  staffId: string;
+  monthlySalary: string;
+  officeAddress: string;
+  salaryAccountBankName: string;
+  salaryAccountName: string;
+  salaryAccountNumber: string;
+  ministryId: string;
+  stateGovernmentId: string;
+}
+
+export interface VirtualAccount {
+  walletbalance: number;
+  accountName: string;
+  bankName: string;
+  createdAt: string;
+  customerIdentifier: string;
+  virtualAccountNumber: string;
+}
+
 export interface UserResponse {
   accountOfficerCode: string;
   firstName: string;
@@ -50,8 +92,8 @@ export interface UserResponse {
   deliveryDateOption: string;
   documentCheck: boolean;
   email: string;
-  emandateValidation: { isMandateOrder: boolean; isMandatePayment: boolean };
-  employed: { workIDCard: []; salaryAccounts: [] };
+  emandateValidation: EmandateValidation;
+  employed: EmployedData;
   employmentStatus: string;
   id: string;
   isApproved: boolean;
@@ -79,31 +121,15 @@ export interface UserResponse {
   referralRewardedCustomers: [];
   referredCustomers: [];
   referrerId: null;
-  selfEmployed: { businessAccounts: [] };
-  stateGovernmentData: {
-    staffId: string;
-    monthlySalary: string;
-    officeAddress: string;
-    salaryAccountBankName: string;
-    salaryAccountName: string;
-    salaryAccountNumber: string;
-    ministryId: string;
-    stateGovernmentId: string;
-  };
+  selfEmployed: SelfEmployedData;
+  stateGovernmentData: StateGovernmentData;
   status: string;
-  student: { studentIdCard: []; accounts: [] };
+  student: StudentData;
   switchFlexible: boolean;
   updatedAt: string;
   userPassword: string;
   userType: [];
-  virtualAccount: {
-    walletbalance: number;
-    accountName: string;
-    bankName: string;
-    createdAt: string;
-    customerIdentifier: string;
-    virtualAccountNumber: string;
-  };
+  virtualAccount: VirtualAccount;
   _id: string;
 }
 interface OrderItems {
@@ -193,10 +219,13 @@ export interface NotificationMessage {
   _id: string;
 }
 
-export interface UserNotificationsResponse {
+export interface NotificationItem {
   timeAgo: string;
   message: NotificationMessage;
 }
+
+// Notifications are returned grouped by date string keys (e.g. "Fri Feb 27 2026")
+export type UserNotificationsResponse = Record<string, NotificationItem[]>;
 
 export interface UpdateProfilePayload {
   firstName: string;
@@ -222,3 +251,241 @@ export type TransactionHistoryResponse = {
   isNextPage: boolean;
   count: number;
 };
+
+export interface RewardHistory {
+  _id: string;
+  userId: string;
+  reward: string;
+  rewardType: GamificationRewardType;
+  order: string;
+  status: "active" | "used";
+  expiresAt: string;
+  wonOn: string;
+  createdAt: string;
+  updatedAt: string;
+  checkoutCategory: string;
+  claimedAt: string;
+  discountSpinBonus: string;
+  discountSpinDiscount: number;
+  displayLabel: string;
+  issuedAt: string;
+  presentationSeen: boolean;
+  promoCodeDetails: { amount: number; code: string; discount: number | null };
+  source: GamificationRewardType;
+  usedAt: string;
+}
+
+export type GamificationPresentationType = "banner" | "modal" | "inline";
+export type GamificationRewardType = "discountSpin" | "promoCode" | "freeDelivery";
+
+interface CheckoutGamificationCategory {
+  eligible: boolean;
+  offerId: string;
+  presentationType: GamificationPresentationType;
+  priority: number;
+  showToUser: boolean;
+}
+
+export interface UsedClaimResponse {
+  kind: GamificationRewardType;
+  rewardType: GamificationRewardType;
+  active: boolean;
+  rewardId: string;
+  order: string;
+  status: "active" | "used";
+  usedAt: string;
+  source: GamificationRewardType;
+  displayLabel: string;
+}
+
+export interface GamificationReward {
+  active: boolean;
+  checkoutCategory: string;
+  claimedAt: string;
+  discountSpinBonus: number;
+  discountSpinDiscount: number;
+  displayLabel: string;
+  expiresAt: string;
+  issuedAt: string;
+  order: null;
+  presentationSeen: boolean;
+  promoCodeDetails: null;
+  reward: string;
+  rewardId: string;
+  rewardType: GamificationRewardType;
+  source: string;
+  used: boolean;
+  usedAt: string;
+}
+
+export interface ClaimGamificationPayload {
+  reward: string;
+  rewardType: GamificationRewardType;
+  orderId?: string;
+  expiresAt?: string;
+  status?: string;
+  discountSpinDiscount?: number;
+  discountSpinBonus?: number;
+  promoCodeDetails?: number;
+  checkoutCategory?: number;
+}
+
+export interface ClaimRewardResponse {
+  userId: string;
+  reward: string;
+  rewardType: GamificationRewardType;
+  discountSpinBonus: number | null;
+  discountSpinDiscount: number | null;
+  promoCodeDetails: number | null;
+  checkoutCategory: number | null;
+  order: string;
+  status: string;
+  expiresAt: string | null;
+  issuedAt: string;
+  claimedAt: string;
+  usedAt: string;
+  presentationSeen: false;
+  source: GamificationRewardType;
+  displayLabel: string;
+  _id: string;
+  wonOn: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface DiscountSpinGamificationCategory {
+  delaySeconds: number;
+  durationSeconds: number;
+  eligible: boolean;
+  offerId: string;
+  presentationType: GamificationPresentationType;
+  priority: number;
+  showToUser: boolean;
+  reward: GamificationReward;
+}
+
+interface FreeDeliveryGamificationCategory {
+  durationSeconds: number;
+  eligible: boolean;
+  offerId: string;
+  presentationType: GamificationPresentationType;
+  priority: number;
+  reward: GamificationReward;
+  showToUser: boolean;
+}
+
+interface PromoCodeGamificationCategory {
+  eligible: boolean;
+  enabled: boolean;
+  offerId: string;
+  presentationType: GamificationPresentationType;
+  priority: number;
+  showToUser: boolean;
+}
+
+export interface AdminGamifiedEnabled {
+  checkoutCategory: { enabled: boolean };
+  discountSpin: { enabled: boolean; delaySeconds: number; durationSeconds: number };
+  freeDelivery: { enabled: boolean; durationSeconds: number };
+  promoCode: { enabled: boolean };
+}
+
+export interface UserGamification {
+  checkoutCategory: CheckoutGamificationCategory;
+  discountSpin: DiscountSpinGamificationCategory;
+  freeDelivery: FreeDeliveryGamificationCategory;
+  promoCode: PromoCodeGamificationCategory;
+  serverTime: string;
+  serverTimeMs: number;
+}
+
+export type GamificationScope =
+  | "Fixed Amount"
+  | "5% discount on all pruchase"
+  | "Percentage discount";
+
+export interface SpinScope {
+  adminId: string;
+  createdAt: string;
+  image: string;
+  isActive: boolean;
+  scope: GamificationScope;
+  updatedAt: string;
+  value: number;
+  _id: string;
+}
+
+export interface SpinFunction {
+  isActive: boolean;
+  isAdminActive: boolean;
+  _id: string;
+  scopeId: SpinScope;
+}
+
+export interface SpinItems {
+  adminId: string;
+  campaign: string;
+  createdAt: string;
+  description: string;
+  discountUsage: unknown[];
+  endDate: string;
+  endTime: string;
+  isActive: boolean;
+  startDate: string;
+  startTime: string;
+  targetAudience: string;
+  updatedAt: string;
+  usageLimitPerUser: number;
+  functions: SpinFunction[];
+  _id: string;
+}
+
+/** A single toggleable gamification reward shown in the cart totals. */
+export interface RewardToggle {
+  type: GamificationRewardType;
+  /** Label on the toggle row, e.g. "Apply Spin & Win reward". */
+  label: string;
+  /** Label on the discount line shown once applied, e.g. "Spin & Win Discount". */
+  discountLabel: string;
+  /** Naira amount deducted when this reward is applied. */
+  discount: number;
+  isApplied: boolean;
+  onToggle: (value: boolean) => void;
+}
+
+/** A discount actually applied to the checkout total (toggled or dashboard-selected). */
+export interface AppliedDiscount {
+  type: GamificationRewardType;
+  /** Human label, e.g. "Free Delivery Discount". */
+  label: string;
+  /** Naira amount deducted. */
+  amount: number;
+}
+
+export interface CartTotalProps {
+  /** Whether the totals are still resolving (fees / first-order checks). */
+  isLoading: boolean;
+  subtotal: number;
+  deliveryCharge: number;
+  serviceCharge: number;
+  /** Total after any applied discounts. */
+  total: number;
+  accountType: UserResponse["accountType"] | undefined;
+  /** Whether to show the promo-code card. */
+  canUsePromoCode: boolean;
+  onProceedToCheckout: () => void;
+}
+
+export interface PromoCodeResponse {
+  campaign: string;
+  customerInfo: null;
+  description: string;
+  expiresAt: number;
+  image: string;
+  minimumOrderValue: number;
+  scope: GamificationScope;
+  startsAt: number;
+  targetAudience: string;
+  value: number;
+  rewardHistory: RewardHistory;
+}

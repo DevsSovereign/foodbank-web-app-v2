@@ -1,17 +1,13 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import useGetCheckoutTotal from "@/hooks/useGetCheckoutTotal";
 
-type CheckoutTotalType = "subtotal" | "deliveryCharge" | "serviceCharge" | "total";
+type CheckoutTotalType = "subtotal" | "deliveryCharge" | "serviceCharge" | "discount" | "total";
 
 export default function CheckoutTotal({ type = "total" }: { type: CheckoutTotalType }) {
-  const searchParams = useSearchParams();
+  const { subtotal, deliveryFee, serviceFee, totalDiscount, amountPay } = useGetCheckoutTotal();
 
-  const subtotal = Number(searchParams.get("sub") ?? 0);
-  const deliveryCharge = Number(searchParams.get("del") ?? 0);
-  const serviceCharge = Number(searchParams.get("svc") ?? 500);
-
-  const total = subtotal + deliveryCharge + serviceCharge;
+  const isDiscount = type === "discount";
 
   const displayedValue = () => {
     switch (type) {
@@ -19,21 +15,25 @@ export default function CheckoutTotal({ type = "total" }: { type: CheckoutTotalT
         return subtotal;
 
       case "deliveryCharge":
-        return deliveryCharge;
+        return deliveryFee;
 
       case "serviceCharge":
-        return serviceCharge;
+        return serviceFee;
+
+      case "discount":
+        return totalDiscount;
 
       default:
-        return total;
+        return amountPay;
     }
   };
 
   return (
     <span
-      className={`text-gray-800 ${type === "total" ? "font-black text-lg" : "font-bold text-base"}`}
+      className={`${isDiscount ? "text-[#8cc629]" : "text-gray-800"} ${type === "total" ? "font-black text-lg" : "font-bold text-base"}`}
     >
-      ₦{displayedValue().toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+      {isDiscount ? "−" : ""}₦
+      {displayedValue().toLocaleString("en-NG", { minimumFractionDigits: 2 })}
     </span>
   );
 }

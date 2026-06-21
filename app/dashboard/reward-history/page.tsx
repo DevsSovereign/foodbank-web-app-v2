@@ -2,40 +2,66 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { Gift, ArrowRight, X } from "lucide-react";
+import { Gift, ArrowRight, X, Loader2, Check } from "lucide-react";
+import { useGetRewardHistory } from "@/lib/queries";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { useRewardStore } from "@/store/useRewardStore";
+import type { RewardHistory } from "@/types/user";
 
-const rewardHistoryData = [
-  {
-    id: 1,
-    item: "Face Cap",
-    order: "#23456",
-    status: "Applied to Order #23456",
-    date: "12 Jan 2026",
-    modalStatus: "Used",
-  },
-  {
-    id: 2,
-    item: "0.5% Discount",
-    order: "#23456",
-    status: "Available for use",
-    date: "12 Jan 2026",
-    modalStatus: "Active",
-  },
-  {
-    id: 3,
-    item: "₦1000 Bonus",
-    order: "#23456",
-    status: "Applied to Order #23456",
-    date: "12 Jan 2026",
-    modalStatus: "Used",
-  },
-];
+const formatDate = (value?: string) =>
+  value
+    ? new Date(value).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
+
+const isActiveStatus = (status?: RewardHistory["status"]) => status === "active";
+
+function StatusBadge({ status }: { status: RewardHistory["status"] }) {
+  const isActive = isActiveStatus(status);
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+        isActive ? "bg-[#e8f5e9] text-[#2a9d5c]" : "bg-red-50 text-red-500"
+      }`}
+    >
+      <span className={`size-1.5 rounded-full ${isActive ? "bg-[#2a9d5c]" : "bg-red-500"}`} />
+      {status}
+    </span>
+  );
+}
 
 export default function RewardHistoryPage() {
-  const hasRewards = rewardHistoryData.length > 0;
-  const [selectedReward, setSelectedReward] = useState<(typeof rewardHistoryData)[0] | null>(null);
+  const { data: rewardHistoryData, isLoading: rewardHistoryLoading } = useGetRewardHistory();
+  const [selectedReward, setSelectedReward] = useState<RewardHistory | null>(null);
+  const { toast } = useToast();
+  const selectedRewards = useRewardStore((state) => state.selectedRewards);
+  const toggleSelectedReward = useRewardStore((state) => state.toggleSelectedReward);
+
+  const rewards = rewardHistoryData?.items ?? [];
+  const hasRewards = rewards.length > 0;
+
+  const isRewardSelected = (reward: RewardHistory) =>
+    selectedRewards.some((r) => r._id === reward._id);
 
   const closeModal = () => setSelectedReward(null);
+
+  /** Note: Selecting a reward stores it for the next checkout, where it is consumed
+  (via the order's gamified payload) and then cleared. Toggling again
+  de-selects it. Multiple rewards can be selected at once. */
+  const handleToggleReward = (reward: RewardHistory) => {
+    const wasSelected = isRewardSelected(reward);
+    toggleSelectedReward(reward);
+    toast({
+      variant: "success",
+      title: wasSelected
+        ? "Reward removed from your next checkout"
+        : "Reward selected — it will be applied at your next checkout",
+    });
+    closeModal();
+  };
 
   return (
     <div className="w-full">
@@ -47,7 +73,11 @@ export default function RewardHistoryPage() {
         </p>
       </div>
 
-      {hasRewards ? (
+      {rewardHistoryLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="size-8 text-[#8cc629] animate-spin" />
+        </div>
+      ) : hasRewards ? (
         /* Table Section */
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100">
@@ -79,25 +109,36 @@ export default function RewardHistoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {rewardHistoryData.map((reward) => (
-                  <tr key={reward.id} className="hover:bg-gray-50/50 transition-colors">
+                {rewards.map((reward) => (
+                  <tr key={reward._id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="py-4 px-6 w-20">
                       <div className="size-10 rounded-full bg-[#e8f5e9] flex items-center justify-center">
                         <Gift className="size-5 text-[#2a9d5c]" />
                       </div>
                     </td>
                     <td className="py-4 px-6 text-sm font-medium text-gray-900 text-center">
-                      {reward.item}
+                      {reward.displayLabel || reward.reward}
                     </td>
-                    <td className="py-4 px-6 text-sm text-gray-500 text-center">{reward.status}</td>
-                    <td className="py-4 px-6 text-sm text-gray-500 text-center">{reward.date}</td>
+                    <td className="py-4 px-6 text-sm text-center">
+                      <StatusBadge status={reward.status} />
+                    </td>
+                    <td className="py-4 px-6 text-sm text-gray-500 text-center">
+                      {formatDate(reward.wonOn)}
+                    </td>
                     <td className="py-4 px-6 text-sm text-right">
-                      <button
-                        onClick={() => setSelectedReward(reward)}
-                        className="text-[#8cc629] font-medium hover:text-[#7ab824] inline-flex items-center gap-1 transition-colors"
-                      >
-                        View Details <ArrowRight className="size-4" />
-                      </button>
+                      <div className="inline-flex items-center gap-3">
+                        {isRewardSelected(reward) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5e9] px-2.5 py-1 text-xs font-semibold text-[#2a9d5c]">
+                            <Check className="size-3" /> Selected
+                          </span>
+                        )}
+                        <button
+                          onClick={() => setSelectedReward(reward)}
+                          className="text-[#8cc629] font-medium hover:text-[#7ab824] inline-flex items-center gap-1 transition-colors"
+                        >
+                          View Details <ArrowRight className="size-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -107,20 +148,24 @@ export default function RewardHistoryPage() {
 
           {/* Mobile View */}
           <div className="md:hidden">
-            {rewardHistoryData.map((reward) => (
-              <div key={reward.id} className="p-4 border-b border-gray-100 last:border-0">
+            {rewards.map((reward) => (
+              <div key={reward._id} className="p-4 border-b border-gray-100 last:border-0">
                 <div className="flex justify-between items-start mb-1">
-                  <h3 className="text-sm font-bold text-gray-900">{reward.item}</h3>
-                  <span className="text-[10px] text-gray-500">{reward.date}</span>
+                  <h3 className="text-sm font-bold text-gray-900">
+                    {reward.displayLabel || reward.reward}
+                  </h3>
+                  <span className="text-[10px] text-gray-500">{formatDate(reward.wonOn)}</span>
                 </div>
-                <p className="text-xs text-gray-500 mb-4">{reward.status}</p>
 
-                <div className="flex justify-between items-center">
-                  <span
-                    className={`text-sm font-medium ${reward.modalStatus === "Used" ? "text-red-500" : "text-[#2a9d5c]"}`}
-                  >
-                    {reward.modalStatus}
-                  </span>
+                <div className="flex justify-between items-center mt-3">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={reward.status} />
+                    {isRewardSelected(reward) && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5e9] px-2 py-0.5 text-[10px] font-semibold text-[#2a9d5c]">
+                        <Check className="size-3" /> Selected
+                      </span>
+                    )}
+                  </div>
 
                   <button
                     onClick={() => setSelectedReward(reward)}
@@ -171,30 +216,54 @@ export default function RewardHistoryPage() {
                 <div className="flex justify-between items-center border-b border-[#e2efe6] pb-4">
                   <span className="text-[#2a9d5c] text-[13px] font-medium">Reward:</span>
                   <span className="text-gray-800 text-[13px] font-medium">
-                    {selectedReward.item}
+                    {selectedReward.displayLabel || selectedReward.reward}
                   </span>
                 </div>
-                <div className="flex justify-between items-center border-b border-[#e2efe6] pb-4">
-                  <span className="text-[#2a9d5c] text-[13px] font-medium">Order:</span>
-                  <span className="text-gray-800 text-[13px] font-medium">
-                    {selectedReward.order}
-                  </span>
-                </div>
+                {selectedReward.order && (
+                  <div className="flex justify-between items-center border-b border-[#e2efe6] pb-4">
+                    <span className="text-[#2a9d5c] text-[13px] font-medium">Order:</span>
+                    <span className="text-gray-800 text-[13px] font-medium">
+                      {selectedReward.order}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center border-b border-[#e2efe6] pb-4">
                   <span className="text-[#2a9d5c] text-[13px] font-medium">Won On:</span>
                   <span className="text-gray-800 text-[13px] font-medium">
-                    {selectedReward.date}
+                    {formatDate(selectedReward.wonOn)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[#2a9d5c] text-[13px] font-medium">Status:</span>
-                  <span
-                    className={`text-[13px] font-medium ${selectedReward.modalStatus === "Used" ? "text-red-500" : "text-gray-800"}`}
-                  >
-                    {selectedReward.modalStatus}
-                  </span>
+                  <StatusBadge status={selectedReward.status} />
                 </div>
+                {selectedReward.status === "used" && (
+                  <div className="flex justify-between items-center border-b border-[#e2efe6] pb-4">
+                    <span className="text-[#2a9d5c] text-[13px] font-medium">Used On:</span>
+                    <span className="text-gray-800 text-[13px] font-medium">
+                      {formatDate(selectedReward.usedAt)}
+                    </span>
+                  </div>
+                )}
               </div>
+
+              {/* Use / Remove toggle — only for active rewards */}
+              {isActiveStatus(selectedReward.status) &&
+                (isRewardSelected(selectedReward) ? (
+                  <button
+                    onClick={() => handleToggleReward(selectedReward)}
+                    className="mt-6 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                  >
+                    Remove from Checkout
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleToggleReward(selectedReward)}
+                    className="mt-6 w-full bg-[#8cc629] hover:bg-[#7ab824] text-white font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                  >
+                    Use Reward
+                  </button>
+                ))}
             </div>
           </div>
         </div>

@@ -8,6 +8,15 @@ import {
   UserNotificationsResponse,
   UpdateProfilePayload,
   TransactionHistoryResponse,
+  UserGamification,
+  SpinItems,
+  AdminGamifiedEnabled,
+  ClaimGamificationPayload,
+  GamificationRewardType,
+  ClaimRewardResponse,
+  RewardHistory,
+  UsedClaimResponse,
+  PromoCodeResponse,
 } from "@/types/user";
 import { apiClient } from "../api-client";
 
@@ -48,8 +57,8 @@ export const userService = {
     );
   },
 
-  async getNotifications(): Promise<UserNotificationsResponse[]> {
-    return await apiClient.get<UserNotificationsResponse[]>(`/getCustomerNotifications`);
+  async getNotifications(): Promise<UserNotificationsResponse> {
+    return await apiClient.get<UserNotificationsResponse>(`/getCustomerNotifications`);
   },
 
   async getFAQs(): Promise<{ faqs: [] }> {
@@ -71,5 +80,64 @@ export const userService = {
     return await apiClient.get<TransactionHistoryResponse>(
       `/users/transaction-history/transactions?limit=5`,
     );
+  },
+
+  async getRewardHistory() {
+    const res = await apiClient.get<{
+      data: { items: RewardHistory[]; total: number; page: number; limit: number };
+    }>(`/user/gamification/rewards/me`);
+
+    return res.data;
+  },
+
+  async getAdminGamificationConfig() {
+    const res = await apiClient.get<{ data: AdminGamifiedEnabled }>("/user/gamification/config/me");
+    return res.data;
+  },
+
+  async getGamificationState() {
+    const res = await apiClient.get<{ data: UserGamification }>("/user/gamification/state");
+    return res.data;
+  },
+
+  async getSpinItems() {
+    const res = await apiClient.get<{ data: { items: SpinItems[] } }>(
+      "/user/gamification/discounts",
+    );
+    return res.data.items[0];
+  },
+
+  async claimGamification(payload: ClaimGamificationPayload) {
+    const res = await apiClient.post<{ data: ClaimRewardResponse }>(
+      "/user/gamification/rewards",
+      payload,
+    );
+    return res.data;
+  },
+
+  async useClaimedGamification({
+    kind,
+    orderId,
+  }: {
+    kind: GamificationRewardType;
+    /**ID of the reward*/
+    orderId: string;
+  }) {
+    const res = await apiClient.post<{ message: string; data: UsedClaimResponse }>(
+      "/user/gamification/reward/use",
+      {
+        kind,
+        orderId,
+      },
+    );
+    return res;
+  },
+
+  async validatePromoCode({ promoCode, orderAmount }: { promoCode: string; orderAmount: number }) {
+    const res = await apiClient.post<{ data: PromoCodeResponse; message: string }>(
+      "/user/gamification/promo-code/validate",
+      { promoCode, orderAmount },
+    );
+    return res;
   },
 };

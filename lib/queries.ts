@@ -24,6 +24,10 @@ export const queryKeys = {
   allFees: "allFees",
   accountOfficer: "accountOfficer",
   transactions: "transactions",
+  gamification: "gamification",
+  spinItems: "spinItems",
+  adminConfig: "adminConfig",
+  rewardHistory: "rewardHistory",
 };
 
 // queries
@@ -192,6 +196,59 @@ export const useGetUserTransactions = () => {
     queryFn: async () => {
       return await userService.getUserTransactions();
     },
+  });
+
+  return queryResult;
+};
+
+export const useGetAdminGamificationConfig = () => {
+  const token = getAuthToken();
+
+  const queryResult = useQuery({
+    queryKey: [queryKeys.adminConfig],
+    queryFn: async () => {
+      return await userService.getAdminGamificationConfig();
+    },
+    enabled: !!token,
+  });
+
+  return queryResult;
+};
+
+export const useGetUserGamification = () => {
+  const token = getAuthToken();
+
+  const queryResult = useQuery({
+    queryKey: [queryKeys.gamification],
+    queryFn: async () => {
+      return await userService.getGamificationState();
+    },
+    enabled: !!token,
+  });
+
+  return queryResult;
+};
+
+export const useGetRewardHistory = () => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.rewardHistory],
+    queryFn: async () => {
+      return await userService.getRewardHistory();
+    },
+  });
+
+  return queryResult;
+};
+
+export const useGetSpinItems = () => {
+  const token = getAuthToken();
+
+  const queryResult = useQuery({
+    queryKey: [queryKeys.spinItems],
+    queryFn: async () => {
+      return await userService.getSpinItems();
+    },
+    enabled: !!token,
   });
 
   return queryResult;

@@ -23,27 +23,32 @@ import {
   LayoutDashboard,
   X,
   Menu,
+  Gift,
 } from "lucide-react";
 import { clearAuthToken } from "@/lib/auth-utils";
 import { useUserStore } from "@/store/useUserStore";
 import { getGreeting } from "../functions/greetings";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Sidebar() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const { isMobileSidebarOpen, closeMobileSidebar, toggleMobileSidebar } = useSidebar();
   const pathname = usePathname();
-  const { user, clearUser } = useUserStore();
+  const { user, clearUserStore } = useUserStore();
+  const queryClient = useQueryClient()
 
   // Derive display name from email (before the @)
   const displayName = user?.firstName || user?.email?.split("@")[0] || "User";
 
   const isActive = (path: string) => pathname?.startsWith(path);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (typeof window === "undefined") return;
 
+    await queryClient.cancelQueries();
+    queryClient.clear();
     clearAuthToken();
-    clearUser();
+    clearUserStore();
     window.location.href = "/";
   };
 
@@ -291,7 +296,7 @@ export default function Sidebar() {
                 <span className="font-medium">Repayment History</span>
               </Link>
             </li> */}
-            {/* <li>
+            <li>
               <Link
                 href="/dashboard/reward-history"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
@@ -303,7 +308,7 @@ export default function Sidebar() {
                 <Gift size={20} />
                 <span className="font-medium">Reward History</span>
               </Link>
-            </li> */}
+            </li>
             <li>
               <Link
                 href="/dashboard/faqs"

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { STORAGE_KEYS } from "@/lib/auth-utils";
 
 export function proxy(request: NextRequest) {
-  const token = request.cookies.get("fb4u_token")?.value;
+  const token = request.cookies.get(STORAGE_KEYS.TOKEN_KEY)?.value;
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/dashboard") && !token) {

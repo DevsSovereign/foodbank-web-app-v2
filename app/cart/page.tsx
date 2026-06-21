@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import Image from "next/image";
@@ -21,12 +20,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import SubHeader from "@/components/sub-header";
 import useUserLocation from "@/hooks/useUserLocation";
 import { useUserStore } from "@/store/useUserStore";
-import LoaderSection from "@/components/ui/Loader";
+import CartTotal from "./cart-totals/CartTotal";
+import ShoppingCart from "./shopping-cart/ShoppingCart";
 
 export default function CartPage() {
-  const { user } = useUserStore();
+  const { user, userEligibles, adminGamifiedEnabled } = useUserStore();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isInstructionAgreed, setIsInstructionAgreed] = useState<boolean>(false);
   const router = useRouter();
   const token = getAuthToken();
   const { toast } = useToast();
@@ -87,10 +86,6 @@ export default function CartPage() {
       setCartItems(previousItems);
       toast({ variant: "error", title: "Failed to remove item. Please try again." });
     }
-  };
-
-  const handleGoToCheckout = () => {
-    return router.push(`/checkout?sub=${subtotal}&del=${deliveryCharge}&svc=${serviceCharge}`);
   };
 
   useEffect(() => {
@@ -213,275 +208,27 @@ export default function CartPage() {
           </div>
 
           <div className="flex flex-col lg:flex-row gap-8 items-start">
-            <div className="flex-1 w-full">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Shopping Cart</h2>
+            <ShoppingCart
+              cartItems={cartItems}
+              onRemoveItem={removeItem}
+              onUpdateQuantity={updateQuantity}
+              onReturnToStore={() => router.push("products?page=0")}
+            />
 
-              <div className="bg-white border border-gray-100 rounded-sm overflow-hidden mb-8 shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50 text-xs font-bold text-gray-600 uppercase tracking-wider border-b border-gray-100">
-                        <th className="px-6 py-4">Products</th>
-                        <th className="px-6 py-4">Price</th>
-                        <th className="px-6 py-4">Quantity</th>
-                        <th className="px-6 py-4">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {cartItems.map((item) => (
-                        <tr key={item.id} className="group hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-6">
-                            <div className="flex items-center gap-4">
-                              <button
-                                title={`Remove ${item.name}`}
-                                onClick={() => removeItem(item.id)}
-                                className="text-gray-300 hover:text-red-500 transition-colors"
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="20"
-                                  height="20"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <circle cx="12" cy="12" r="10" />
-                                  <path d="m15 9-6 6" />
-                                  <path d="m9 9 6 6" />
-                                </svg>
-                              </button>
-                              <div className="relative size-20 bg-gray-50 rounded-sm shrink-0">
-                                {item.image?.startsWith("http") ? (
-                                  <img
-                                    src={item.image}
-                                    alt={item.name}
-                                    width={50}
-                                    height={50}
-                                    className="absolute inset-0 size-full object-contain p-2"
-                                    loading="lazy"
-                                    onError={(e) => {
-                                      (e.currentTarget as HTMLImageElement).src =
-                                        "/assets/foodbank-logo-4-1.png";
-                                    }}
-                                  />
-                                ) : (
-                                  <Image
-                                    src={item.image || "/assets/foodbank-logo-4-1.png"}
-                                    alt={item.name}
-                                    fill
-                                    className="object-contain p-2"
-                                  />
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-gray-800 mb-1">
-                                  {item.name}
-                                </p>
-                                <span className="text-[10px] bg-[#fff0e5] text-[#ff8a00] px-2 py-0.5 rounded-full font-bold uppercase">
-                                  {item.tag}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-6 text-sm font-medium text-gray-800">
-                            ₦{item.price.toLocaleString()}
-                          </td>
-                          <td className="px-6 py-6">
-                            <div className="flex items-center border border-gray-200 rounded-md w-fit">
-                              <button
-                                onClick={() => updateQuantity(item.id, -1)}
-                                className="px-3 py-1.5 hover:bg-gray-50 text-gray-600 transition-colors"
-                              >
-                                —
-                              </button>
-                              <span className="px-3 py-1.5 text-sm font-medium border-x border-gray-200 min-w-10 text-center">
-                                {item.quantity.toString().padStart(2, "0")}
-                              </span>
-                              <button
-                                onClick={() => updateQuantity(item.id, 1)}
-                                className="px-3 py-1.5 hover:bg-gray-50 text-gray-600 transition-colors"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </td>
-                          <td className="px-6 py-6 text-sm font-bold text-gray-800">
-                            ₦{(item.price * item.quantity).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="px-6 py-4 bg-white flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-100">
-                  <button
-                    onClick={() => router.push("products?page=0")}
-                    className="text-[13px] font-bold text-[#8cc629] border border-[#8cc629] px-6 py-2.5 rounded-md hover:bg-[#f4faee] transition-colors w-full sm:w-auto uppercase tracking-wide"
-                  >
-                    Return to store
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="w-full lg:w-95 space-y-6">
-              <div className="bg-white border border-gray-100 rounded-sm shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-xl font-bold text-gray-800">Cart Totals</h3>
-                </div>
-
-                {firstOrderLoading || allFeesLoading ? (
-                  <LoaderSection />
-                ) : (
-                  <div className="p-6 space-y-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Sub total</span>
-                      <span className="font-bold text-gray-800">
-                        ₦{subtotal.toLocaleString()}.00
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Delivery Charge</span>
-                      <span className="font-bold text-gray-800">
-                        ₦{deliveryCharge.toLocaleString()}.00
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Service Charge</span>
-                      <span className="font-bold text-gray-800">
-                        ₦{serviceCharge.toLocaleString()}.00
-                      </span>
-                    </div>
-                    <div className="pt-4 border-t border-gray-100 flex justify-between">
-                      <span className="font-bold text-gray-800">Total</span>
-                      <span className="text-xl font-bold text-gray-800">
-                        ₦{total.toLocaleString()}.00
-                      </span>
-                    </div>
-
-                    {user?.accountType === "flexible" ? (
-                      <div className="flex flex-col gap-4 w-full">
-                        <span className="font-medium text-sm text-gray-500">
-                          Your account is a flexible account. Please proceed to checkout on our
-                          mobile application
-                        </span>
-
-                        <div className="flex flex-wrap lg:flex-nowrap gap-3">
-                          <a
-                            href="https://apps.apple.com/ng/app/foodbankapp/id6608982689"
-                            target="_blank"
-                            className="flex items-center bg-[#2a2a2a] rounded-lg px-4 py-2.5 hover:bg-[#3a3a3a] transition cursor-pointer whitespace-nowrap"
-                          >
-                            <Image
-                              src="/assets/apple-negative-1.svg"
-                              alt="Apple logo"
-                              width={20}
-                              height={24}
-                              className="w-5 h-6 object-contain"
-                            />
-                            <div className="ml-2.5">
-                              <p className="text-[10px] text-gray-300 leading-tight">
-                                Download on the
-                              </p>
-                              <p className="text-sm font-semibold text-white leading-tight">
-                                App Store
-                              </p>
-                            </div>
-                          </a>
-
-                          <a
-                            href="https://play.google.com/store/apps/details?id=com.foodbank4u.app"
-                            target="_blank"
-                            className="flex items-center bg-[#2a2a2a] rounded-lg px-4 py-2.5 hover:bg-[#3a3a3a] transition cursor-pointer whitespace-nowrap"
-                          >
-                            <Image
-                              src="/assets/icon-google-play-1.svg"
-                              alt="Google Play logo"
-                              width={20}
-                              height={24}
-                              className="w-5 h-6 object-contain"
-                            />
-                            <div className="ml-2.5">
-                              <p className="text-[10px] text-gray-300 leading-tight">
-                                Download on the
-                              </p>
-                              <p className="text-sm font-semibold text-white leading-tight">
-                                Google play
-                              </p>
-                            </div>
-                          </a>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-4 w-full">
-                        <div className="flex items-start gap-2">
-                          <input
-                            checked={isInstructionAgreed}
-                            onChange={(e) => setIsInstructionAgreed(e.target.checked)}
-                            type="checkbox"
-                            id="terms"
-                            className="mt-1 accent-[#8cc629]"
-                          />
-                          <label
-                            htmlFor="terms"
-                            className="text-[12px] text-gray-500 leading-normal"
-                          >
-                            I have read the instruction above and I agree to{" "}
-                            <Link
-                              href="/terms"
-                              className="text-gray-800 font-medium hover:underline"
-                            >
-                              FoodBank&apos;s Refund & Return Policy
-                            </Link>
-                          </label>
-                        </div>
-
-                        <button
-                          onClick={handleGoToCheckout}
-                          disabled={!isInstructionAgreed}
-                          className="w-full bg-[#8cc629] disabled:opacity-60 text-white py-4 rounded-md font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#7db424] transition-colors mt-4 tracking-wide uppercase"
-                        >
-                          Proceed to Checkout
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M5 12h14" />
-                            <path d="m12 5 7 7-7 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-white border border-gray-100 rounded-sm shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-bold text-gray-800">Coupon Code</h3>
-                </div>
-                <div className="p-6">
-                  <input
-                    type="text"
-                    placeholder="enter your coupon code"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-md text-sm mb-4 focus:outline-none focus:border-[#8cc629]"
-                  />
-                  <button className="w-full bg-[#8cc629] text-white py-3 rounded-md font-bold text-sm hover:bg-[#7db424] transition-colors tracking-wide uppercase">
-                    Apply Coupon
-                  </button>
-                </div>
-              </div>
-            </div>
+            <CartTotal
+              isLoading={firstOrderLoading || allFeesLoading}
+              subtotal={subtotal}
+              deliveryCharge={deliveryCharge}
+              serviceCharge={serviceCharge}
+              total={total}
+              accountType={user?.accountType}
+              canUsePromoCode={
+                user?.accountType === "outright" &&
+                !!userEligibles?.promoCode?.eligible &&
+                !!adminGamifiedEnabled?.promoCode?.enabled
+              }
+              onProceedToCheckout={() => router.push("/checkout")}
+            />
           </div>
         </section>
       )}

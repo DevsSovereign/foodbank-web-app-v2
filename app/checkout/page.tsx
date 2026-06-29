@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, Suspense } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { Home, Loader2 } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
@@ -18,18 +18,22 @@ import { cartService } from "@/lib/services/cart.service";
 import { handleError } from "@/lib/handle-error";
 import { CreateOrderPayload } from "@/types/cart";
 import { useToast } from "@/components/ui/toast/ToastProvider";
-import { queryKeys, useGetCustomer } from "@/lib/queries";
+import { queryKeys, useGetCustomer, useGetUserCheckoutGamification } from "@/lib/queries";
 import { useRouter } from "next/navigation";
 import useGetCheckoutTotal from "@/hooks/useGetCheckoutTotal";
 import { removeFromStorage } from "@/lib/auth-utils";
 import { useRewardStore } from "@/store/useRewardStore";
 import { userService } from "@/lib/services/user.service";
 import { buildGamifiedPayload, getFreeDeliveryReward, getPromoReward } from "@/lib/gamification";
+import CheckoutSpinModal from "@/components/ui/CheckoutSpinModal";
+import type { WheelItem } from "@/components/ui/SpinWheelModal";
+import type { CheckoutCategoryItems } from "@/types/user";
 
 function CheckoutPageContent() {
-  const { user, setUser, userEligibles, rewardsToUse } = useUserStore();
+  const { user, setUser, userEligibles, adminGamifiedEnabled, rewardsToUse } = useUserStore();
   const { selectedRewards, clearSelectedRewards } = useRewardStore();
   const [isCreatingOrder, setIsCreatingOrder] = useState<boolean>(false);
+  const [isCheckoutSpinOpen, setIsCheckoutSpinOpen] = useState<boolean>(false);
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
@@ -45,15 +49,54 @@ function CheckoutPageContent() {
   const { payableDeliveryFee, serviceFee, amountPay } = useGetCheckoutTotal();
   const { toast } = useToast();
   const { refetch: refetchUser } = useGetCustomer();
+  const { data: checkoutGamification } = useGetUserCheckoutGamification({ amountToPay: amountPay });
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // Checkout Spin & Win eligibility — mirrors the home page's gamification gate.
+  const checkoutCategoryEligible =
+    !!adminGamifiedEnabled?.checkoutCategory?.enabled &&
+    !!userEligibles?.checkoutCategory?.eligible &&
+    !!userEligibles?.checkoutCategory?.showToUser;
+
+  // The single tier the user qualifies for: the highest purchaseRange that the
+  // amount payable still meets (amountPay >= purchaseRange).
+  const winningCategory = useMemo(() => {
+    const qualifying = (checkoutGamification ?? []).filter(
+      (category) => amountPay >= category.purchaseRange,
+    );
+    if (qualifying.length === 0) return null;
+    return qualifying.reduce((top, category) =>
+      category.purchaseRange > top.purchaseRange ? category : top,
+    );
+  }, [checkoutGamification, amountPay]);
+
+  // That tier's items become the wheel segments.
+  const checkoutSpinItems: WheelItem<CheckoutCategoryItems>[] = (winningCategory?.items ?? []).map(
+    (item) => ({
+      id: item._id,
+      image: item.imageUrl,
+      label: item.tag,
+      isActive: item.isActive,
+      raw: item,
+    }),
+  );
+
+  const canShowCheckoutSpin = checkoutCategoryEligible && checkoutSpinItems.length > 0;
+
+  // Deferred tail of a successful order: only run once the prize is claimed (or
+  // the spin modal is dismissed), since the order itself is already placed.
+  const finalizeCheckout = async () => {
+    setIsCheckoutSpinOpen(false);
+    await queryClient.invalidateQueries({ queryKey: [queryKeys.rewardHistory] });
+    router.replace("/dashboard/order-history");
+  };
 
   const { isPending: orderIsCreating, mutate } = useMutation({
     mutationFn: cartService.createOrder,
 
     onSuccess: async () => {
       await cartService.outrightSubtractFromWalletById({ amountPay });
-      await queryClient.invalidateQueries({ queryKey: [queryKeys.rewardHistory] });
       const { data: userProfile } = await refetchUser();
       if (!userProfile) return;
 
@@ -64,6 +107,15 @@ function CheckoutPageContent() {
       removeFromStorage("FREE_DELIVERY");
       removeFromStorage("PROMO_CODE");
       clearSelectedRewards();
+
+      // If the user qualifies for a checkout Spin & Win, open it and defer the
+      // reward-history refresh + redirect until they claim (or dismiss) the prize.
+      if (canShowCheckoutSpin) {
+        setIsCheckoutSpinOpen(true);
+        return;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.rewardHistory] });
       router.replace("/dashboard/order-history");
     },
 
@@ -103,14 +155,17 @@ function CheckoutPageContent() {
 
     try {
       // Tell the backend about every reward being used, not just the first.
-      await Promise.all(
-        gamified.map((reward) =>
-          userService.useClaimedGamification({
-            kind: reward.rewardType,
-            orderId: reward.rewardId,
-          }),
-        ),
-      );
+      if (gamified.length > 0) {
+        await Promise.all(
+          gamified.map((reward) =>
+            userService.useClaimedGamification({
+              kind: reward.rewardType,
+              orderId: reward.rewardId,
+            }),
+          ),
+        );
+      }
+
       return mutate(createOrderPayload);
     } catch (error) {
       toast({ variant: "error", title: handleError(error) });
@@ -403,6 +458,14 @@ function CheckoutPageContent() {
         onClose={() => setIsDatePickerOpen(false)}
         onSelectDate={setSelectedDeliveryDate}
         selectedDate={selectedDeliveryDate}
+      />
+
+      {/* Post-order Spin & Win — claiming (or dismissing) finalizes the checkout. */}
+      <CheckoutSpinModal
+        open={isCheckoutSpinOpen}
+        items={checkoutSpinItems}
+        onClose={finalizeCheckout}
+        onClaimed={finalizeCheckout}
       />
     </div>
   );

@@ -6,6 +6,7 @@ export const REWARD_DISCOUNT_LABELS: Record<GamificationRewardType, string> = {
   discountSpin: "Spin & Win Discount",
   freeDelivery: "Free Delivery Discount",
   promoCode: "Promo Code Discount",
+  checkoutCategory: 'Checkout Reward Category'
 };
 
 /** Reads the won Spin & Win reward (a SpinFunction) from session storage, if any. */

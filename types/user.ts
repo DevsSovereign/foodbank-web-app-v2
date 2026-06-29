@@ -331,7 +331,7 @@ export interface ClaimGamificationPayload {
   discountSpinDiscount?: number;
   discountSpinBonus?: number;
   promoCodeDetails?: number;
-  checkoutCategory?: number;
+  checkoutCategory?: { type: string; gift: string };
 }
 
 export interface ClaimRewardResponse {

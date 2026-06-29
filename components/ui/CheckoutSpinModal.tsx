@@ -35,6 +35,10 @@ export default function CheckoutSpinModal({
       reward: wonItem.label,
       rewardType: "checkoutCategory",
       status: wonItem.isActive ? "active" : "",
+      checkoutCategory: {
+        type: wonItem.label,
+        gift: wonItem.label,
+      },
     };
 
     claimMutation(payload, { onSuccess: onClaimed });

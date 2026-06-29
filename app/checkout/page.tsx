@@ -108,8 +108,6 @@ function CheckoutPageContent() {
       removeFromStorage("PROMO_CODE");
       clearSelectedRewards();
 
-      // If the user qualifies for a checkout Spin & Win, open it and defer the
-      // reward-history refresh + redirect until they claim (or dismiss) the prize.
       if (canShowCheckoutSpin) {
         setIsCheckoutSpinOpen(true);
         return;
@@ -426,6 +424,7 @@ function CheckoutPageContent() {
             orderIsCreating ||
             isCreatingOrder ||
             !customerAddress ||
+            //  customerAddress.toLowerCase() === "detecting your current location…" ||
             (!user?.phoneNumber && !customerPhone)
           }
           onConfirmCheckout={handleCheckout}

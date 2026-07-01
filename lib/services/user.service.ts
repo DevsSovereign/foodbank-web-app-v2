@@ -17,6 +17,7 @@ import {
   RewardHistory,
   UsedClaimResponse,
   PromoCodeResponse,
+  CheckoutCategory,
 } from "@/types/user";
 import { apiClient } from "../api-client";
 
@@ -113,6 +114,13 @@ export const userService = {
       payload,
     );
     return res.data;
+  },
+
+  async getCheckoutGamificationCategory() {
+    const res = await apiClient.get<{ data: { items: CheckoutCategory[] } }>(
+      "/user/gamification/discounts/checkout-categories",
+    );
+    return res.data.items;
   },
 
   async useClaimedGamification({

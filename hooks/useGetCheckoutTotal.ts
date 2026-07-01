@@ -56,7 +56,10 @@ const useGetCheckoutTotal = () => {
   const appliedDiscounts = useMemo<AppliedDiscount[]>(() => {
     const byType = new Map<GamificationRewardType, AppliedDiscount>();
 
-    const addDiscount = (type: GamificationRewardType, amount: number) => {
+    const addDiscount = (
+      type: Exclude<GamificationRewardType, "checkoutCategory">,
+      amount: number,
+    ) => {
       if (amount > 0) {
         byType.set(type, { type, label: REWARD_DISCOUNT_LABELS[type], amount });
       }
@@ -76,7 +79,10 @@ const useGetCheckoutTotal = () => {
     // 2) Rewards selected from the dashboard (override cart toggles by type).
     for (const reward of selectedRewards) {
       const type = reward.rewardType ?? reward.source;
-      addDiscount(type, getRewardHistoryDiscount(reward, { deliveryFee, total: grossTotal }));
+      addDiscount(
+        type as Exclude<GamificationRewardType, "checkoutCategory">,
+        getRewardHistoryDiscount(reward, { deliveryFee, total: grossTotal }),
+      );
     }
 
     return Array.from(byType.values());

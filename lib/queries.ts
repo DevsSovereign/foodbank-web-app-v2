@@ -28,6 +28,7 @@ export const queryKeys = {
   spinItems: "spinItems",
   adminConfig: "adminConfig",
   rewardHistory: "rewardHistory",
+  checkoutGamification: "checkoutGamification",
 };
 
 // queries
@@ -210,6 +211,18 @@ export const useGetAdminGamificationConfig = () => {
       return await userService.getAdminGamificationConfig();
     },
     enabled: !!token,
+  });
+
+  return queryResult;
+};
+
+export const useGetUserCheckoutGamification = ({ amountToPay }: { amountToPay: number }) => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.checkoutGamification],
+    queryFn: async () => {
+      return await userService.getCheckoutGamificationCategory();
+    },
+    enabled: !!amountToPay,
   });
 
   return queryResult;

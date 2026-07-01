@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 import NavBar from "@/components/home/NavBar";
 import HeroSection from "@/components/home/HeroSection";
@@ -66,7 +65,6 @@ export default function HomePage() {
   return (
     <>
       <div className="min-h-screen flex flex-col bg-[#fafeff] font-sans relative overflow-x-hidden">
-        <TopRibbon />
         <Header />
         <NavBar />
 

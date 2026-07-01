@@ -276,7 +276,11 @@ export interface RewardHistory {
 }
 
 export type GamificationPresentationType = "banner" | "modal" | "inline";
-export type GamificationRewardType = "discountSpin" | "promoCode" | "freeDelivery";
+export type GamificationRewardType =
+  | "discountSpin"
+  | "promoCode"
+  | "freeDelivery"
+  | "checkoutCategory";
 
 interface CheckoutGamificationCategory {
   eligible: boolean;
@@ -327,7 +331,7 @@ export interface ClaimGamificationPayload {
   discountSpinDiscount?: number;
   discountSpinBonus?: number;
   promoCodeDetails?: number;
-  checkoutCategory?: number;
+  checkoutCategory?: { type: string; gift: string };
 }
 
 export interface ClaimRewardResponse {
@@ -422,6 +426,21 @@ export interface SpinFunction {
   scopeId: SpinScope;
 }
 
+export interface CheckoutCategoryItems {
+  imageUrl: string;
+  tag: string;
+  isActive: boolean;
+  _id: string;
+}
+export interface CheckoutCategory {
+  _id: string;
+  adminId: string;
+  category: string;
+  purchaseRange: number;
+  updatedAt: string;
+  items: CheckoutCategoryItems[];
+}
+
 export interface SpinItems {
   adminId: string;
   campaign: string;
@@ -439,10 +458,9 @@ export interface SpinItems {
   functions: SpinFunction[];
   _id: string;
 }
-
 /** A single toggleable gamification reward shown in the cart totals. */
 export interface RewardToggle {
-  type: GamificationRewardType;
+  type: Exclude<GamificationRewardType, "checkoutCategory">;
   /** Label on the toggle row, e.g. "Apply Spin & Win reward". */
   label: string;
   /** Label on the discount line shown once applied, e.g. "Spin & Win Discount". */
@@ -455,7 +473,7 @@ export interface RewardToggle {
 
 /** A discount actually applied to the checkout total (toggled or dashboard-selected). */
 export interface AppliedDiscount {
-  type: GamificationRewardType;
+  type: Exclude<GamificationRewardType, "checkoutCategory">;
   /** Human label, e.g. "Free Delivery Discount". */
   label: string;
   /** Naira amount deducted. */

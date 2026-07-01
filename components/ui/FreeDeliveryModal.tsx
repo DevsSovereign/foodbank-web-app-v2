@@ -93,11 +93,11 @@ export default function FreeDeliveryModal({ open, onClose }: FreeDeliveryModalPr
             disabled={isClaimed || isClaiming}
             className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white font-bold py-4 rounded-xl text-[18px] md:text-[20px] transition-all shadow-xl shadow-[#8cc629]/20 tracking-wide mb-4 active:scale-95 disabled:opacity-50"
           >
-            {isClaiming ? "Claiming" : "Claim Reward"}
+            {isClaiming ? "Claiming..." : "Claim Reward"}
           </button>
-          <p className="text-[12px] md:text-[13px] text-white/90 font-medium leading-relaxed italic drop-shadow-sm">
+          {/* <p className="text-[12px] md:text-[13px] text-white/90 font-medium leading-relaxed italic drop-shadow-sm">
             Thank you for shopping with us! Spin again on your next purchase above ₦30,000
-          </p>
+          </p> */}
         </div>
       </div>
     </div>

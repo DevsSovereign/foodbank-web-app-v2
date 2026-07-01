@@ -34,6 +34,7 @@ const NO_REWARDS_TO_USE: RewardsToUse = {
   discountSpin: false,
   freeDelivery: false,
   promoCode: false,
+  checkoutCategory: false,
 };
 
 export const useUserStore = create<UserStore & UserStoreActions>((set) => ({
@@ -52,6 +53,5 @@ export const useUserStore = create<UserStore & UserStoreActions>((set) => ({
   toggleRewardToUse: (type, value) =>
     set((state) => ({ rewardsToUse: { ...state.rewardsToUse, [type]: value } })),
 
-  clearUserStore: () =>
-    set({ user: null, userEligibles: null, rewardsToUse: NO_REWARDS_TO_USE }),
+  clearUserStore: () => set({ user: null, userEligibles: null, rewardsToUse: NO_REWARDS_TO_USE }),
 }));

@@ -1,7 +1,10 @@
+"use client";
+
 import { ReactNode, useState } from "react";
 import { Home } from "lucide-react";
 import CategoryDropdown from "../layout/CategoryDropdown";
 import Link from "next/link";
+import { useSupportChat } from "@/hooks/useSupportChat";
 
 interface Props {
   currentLocationData: ReactNode;
@@ -9,6 +12,7 @@ interface Props {
 
 const SubHeader = ({ currentLocationData }: Props) => {
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
+  const openSupport = useSupportChat();
 
   return (
     <nav className="bg-[#f4faee] border-b border-gray-100 py-3 relative z-10">
@@ -72,8 +76,9 @@ const SubHeader = ({ currentLocationData }: Props) => {
             Track Order
           </Link>
 
-          <Link
-            href="/dashboard/support"
+          <button
+            type="button"
+            onClick={openSupport}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
           >
             <svg
@@ -91,9 +96,9 @@ const SubHeader = ({ currentLocationData }: Props) => {
               <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
             </svg>
             Customer Support
-          </Link>
+          </button>
 
-          <Link
+          {/* <Link
             href="/dashboard/help-center"
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
           >
@@ -113,7 +118,7 @@ const SubHeader = ({ currentLocationData }: Props) => {
               <path d="M12 8h.01" />
             </svg>
             Help Center
-          </Link>
+          </Link> */}
         </div>
       </div>
 
@@ -142,8 +147,9 @@ const SubHeader = ({ currentLocationData }: Props) => {
             Track Order
           </Link>
 
-          <Link
-            href="/dashboard/support"
+          <button
+            type="button"
+            onClick={openSupport}
             className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
           >
             <svg
@@ -161,9 +167,9 @@ const SubHeader = ({ currentLocationData }: Props) => {
               <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
             </svg>
             Customer Support
-          </Link>
+          </button>
 
-          <Link
+          {/* <Link
             href="/dashboard/help-center"
             className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
           >
@@ -183,7 +189,7 @@ const SubHeader = ({ currentLocationData }: Props) => {
               <path d="M12 8h.01" />
             </svg>
             Help Center
-          </Link>
+          </Link> */}
         </div>
       )}
     </nav>

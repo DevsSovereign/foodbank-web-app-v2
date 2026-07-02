@@ -95,8 +95,9 @@ export default function ShoppingCart({
                   <td className="px-6 py-6">
                     <div className="flex items-center border border-gray-200 rounded-md w-fit">
                       <button
-                        onClick={() => onUpdateQuantity(item.id, -1)}
-                        className="px-3 py-1.5 hover:bg-gray-50 text-gray-600 transition-colors"
+                        onClick={() => onUpdateQuantity(item.productId, -1)}
+                        disabled={item.quantity <= 1}
+                        className="px-3 py-1.5 hover:bg-gray-50 text-gray-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                       >
                         —
                       </button>
@@ -104,7 +105,7 @@ export default function ShoppingCart({
                         {item.quantity.toString().padStart(2, "0")}
                       </span>
                       <button
-                        onClick={() => onUpdateQuantity(item.id, 1)}
+                        onClick={() => onUpdateQuantity(item.productId, 1)}
                         className="px-3 py-1.5 hover:bg-gray-50 text-gray-600 transition-colors"
                       >
                         +

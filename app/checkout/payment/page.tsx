@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useSupportChat } from "@/hooks/useSupportChat";
 import { Copy, Check, Home } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
@@ -10,6 +11,7 @@ export default function PaymentPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [timeLeft, setTimeLeft] = useState<number>(23 * 3600 + 56 * 60 + 17);
+  const openSupport = useSupportChat();
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -120,8 +122,9 @@ export default function PaymentPage() {
               Track Order
             </Link>
 
-            <Link
-              href="#"
+            <button
+              type="button"
+              onClick={openSupport}
               className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
             >
               <svg
@@ -139,9 +142,9 @@ export default function PaymentPage() {
                 <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
               </svg>
               Customer Support
-            </Link>
+            </button>
 
-            <Link
+            {/* <Link
               href="#"
               className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
             >
@@ -161,7 +164,7 @@ export default function PaymentPage() {
                 <path d="M12 8h.01" />
               </svg>
               Help Center
-            </Link>
+            </Link> */}
           </div>
         </div>
       </nav>

@@ -6,6 +6,7 @@ import { useLoadScript } from "@react-google-maps/api";
 
 import AddressSearch from "./map/AddressSearch";
 import useUserLocation from "@/hooks/useUserLocation";
+import { GOOGLE_MAPS_API_KEY } from "@/lib/config";
 
 // MapView uses browser-only Google Maps APIs — load without SSR
 const MapView = dynamic(() => import("./map/MapView"), { ssr: false });
@@ -14,7 +15,7 @@ const LIBRARIES: ("places" | "geometry")[] = ["places"];
 
 export default function HomePageMap() {
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: LIBRARIES,
   });
   const [markerPosition, setMarkerPosition] = useState<google.maps.LatLngLiteral | null>(null);

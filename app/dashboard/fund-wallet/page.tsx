@@ -3,15 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AmountModal from "@/components/dashboard/AmountModal";
-import BvnVerificationModal from "@/components/dashboard/BvnVerificationModal";
+// import BvnVerificationModal from "@/components/dashboard/BvnVerificationModal";
 
 type Flow = "temporary" | "permanent";
 
 export default function FundWalletPage() {
   const router = useRouter();
   const [amountModalFlow, setAmountModalFlow] = useState<Flow | null>(null);
-  const [isBvnModalOpen, setIsBvnModalOpen] = useState(false);
-  const [pendingAmount, setPendingAmount] = useState<number | null>(null);
+  // const [isBvnModalOpen, setIsBvnModalOpen] = useState(false);
+  // const [pendingAmount, setPendingAmount] = useState<number | null>(null);
 
   const handleAmountSubmit = (amount: number) => {
     const flow = amountModalFlow;
@@ -19,11 +19,12 @@ export default function FundWalletPage() {
 
     if (flow === "temporary") {
       router.push(`/dashboard/fund-wallet/temporary?amount=${amount}`);
-    } else if (flow === "permanent") {
-      // Permanent requires BVN verification before showing the account details.
-      setPendingAmount(amount);
-      setIsBvnModalOpen(true);
     }
+    // else if (flow === "permanent") {
+    //   // Permanent requires BVN verification before showing the account details.
+    //   setPendingAmount(amount);
+    //   setIsBvnModalOpen(true);
+    // }
   };
 
   return (
@@ -32,7 +33,7 @@ export default function FundWalletPage() {
 
       <div className="space-y-6">
         {/* Permanent Virtual Account */}
-        <div className="bg-[#f6f9f1] rounded-xl p-6 md:p-8">
+        {/* <div className="bg-[#f6f9f1] rounded-xl p-6 md:p-8">
           <h2 className="text-lg font-bold text-gray-800 mb-4">Permanent Virtual Account</h2>
           <p className="text-gray-600 text-sm mb-2">Permanent Virtual Account</p>
           <ul className="list-disc pl-5 space-y-1 text-sm text-gray-600 mb-6">
@@ -46,7 +47,7 @@ export default function FundWalletPage() {
           >
             Process with Permanent
           </button>
-        </div>
+        </div> */}
 
         {/* Temporary Virtual Account */}
         <div className="bg-[#f6f9f1] rounded-xl p-6 md:p-8">
@@ -56,7 +57,7 @@ export default function FundWalletPage() {
           </p>
           <ul className="list-disc pl-5 space-y-1 text-sm text-gray-600 mb-6">
             <li>No BVN required</li>
-            <li>Account expires after 15 minutes</li>
+            {/* <li>Account expires after 15 minutes</li> */}
             <li>Valid for a single transaction</li>
           </ul>
           <button
@@ -74,14 +75,14 @@ export default function FundWalletPage() {
         onSubmit={handleAmountSubmit}
       />
 
-      <BvnVerificationModal
+      {/* <BvnVerificationModal
         isOpen={isBvnModalOpen}
         onClose={() => setIsBvnModalOpen(false)}
         onVerified={() => {
           setIsBvnModalOpen(false);
           router.push(`/dashboard/fund-wallet/permanent?amount=${pendingAmount}`);
         }}
-      />
+      /> */}
     </div>
   );
 }

@@ -4,11 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Home, ArrowRight } from "lucide-react";
+import { useSupportChat } from "@/hooks/useSupportChat";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 
 export default function OrderSuccessPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const openSupport = useSupportChat();
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -94,8 +96,9 @@ export default function OrderSuccessPage() {
               Track Order
             </Link>
 
-            <Link
-              href="#"
+            <button
+              type="button"
+              onClick={openSupport}
               className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
             >
               <svg
@@ -113,9 +116,9 @@ export default function OrderSuccessPage() {
                 <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
               </svg>
               Customer Support
-            </Link>
+            </button>
 
-            <Link
+            {/* <Link
               href="#"
               className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
             >
@@ -135,7 +138,7 @@ export default function OrderSuccessPage() {
                 <path d="M12 8h.01" />
               </svg>
               Help Center
-            </Link>
+            </Link> */}
           </div>
         </div>
       </nav>

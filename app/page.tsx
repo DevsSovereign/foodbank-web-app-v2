@@ -99,7 +99,6 @@ export default function HomePage() {
 
       {/* gamification modals — Spin & Win shows first, then Free Delivery */}
       <SpinAndWinModal open={isSpinOpen} onClose={handleSpinDismiss} onClaim={handleSpinClaim} />
-
       <FreeDeliveryModal open={isFreeDeliveryOpen} onClose={() => setIsFreeDeliveryOpen(false)} />
     </>
   );

@@ -5,9 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast/ToastProvider";
+import { useSupportChat } from "@/hooks/useSupportChat";
 
 export default function SetPinPage() {
   const { toast } = useToast();
+  const openSupport = useSupportChat();
   const [pin, setPin] = useState(["", "", "", ""]);
   const [confirmPin, setConfirmPin] = useState(["", "", "", ""]);
   const [step, setStep] = useState(1); // 1: initial, 2: confirm, 3: success
@@ -140,9 +142,13 @@ export default function SetPinPage() {
       <div className="mt-8 text-center">
         <p className="text-xs text-gray-400">
           If you&apos;re having trouble, please contact our{" "}
-          <Link href="/dashboard/support" className="text-[#8cc629] hover:underline">
+          <button
+            type="button"
+            onClick={openSupport}
+            className="text-[#8cc629] hover:underline"
+          >
             Support Team
-          </Link>
+          </button>
         </p>
       </div>
     </div>

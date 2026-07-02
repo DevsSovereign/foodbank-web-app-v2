@@ -11,7 +11,7 @@ interface AmountModalProps {
 
 export default function AmountModal({ isOpen, onClose, onSubmit }: AmountModalProps) {
   const { toast } = useToast();
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState<string>("");
 
   if (!isOpen) return null;
 
@@ -23,8 +23,7 @@ export default function AmountModal({ isOpen, onClose, onSubmit }: AmountModalPr
   const handleSubmit = () => {
     const value = Number(amount);
     if (!value || value <= 0) {
-      toast({ variant: "error", title: "Please enter a valid amount." });
-      return;
+      return toast({ variant: "error", title: "Please enter a valid amount." });
     }
     onSubmit(value);
     setAmount("");

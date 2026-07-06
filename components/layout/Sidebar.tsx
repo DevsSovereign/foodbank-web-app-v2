@@ -43,7 +43,7 @@ export default function Sidebar() {
 
   const isActive = (path: string) => pathname?.startsWith(path);
 
-  const openSupport = useSupportChat();
+  const { open: openSupport, isLoggedIn } = useSupportChat();
 
   const handleLogout = async () => {
     if (typeof window === "undefined") return;
@@ -333,20 +333,22 @@ export default function Sidebar() {
             </h3>
           </div>
           <ul className="space-y-1">
-            <li>
-              <button
-                type="button"
-                onClick={openSupport}
-                className={`flex w-full items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isActive("/dashboard/help-center")
-                    ? "bg-[#f0f7e6] text-[#8cc629]"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <LifeBuoy size={20} />
-                <span className="font-medium">Customer Support</span>
-              </button>
-            </li>
+            {isLoggedIn && (
+              <li>
+                <button
+                  type="button"
+                  onClick={openSupport}
+                  className={`flex w-full items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                    isActive("/dashboard/help-center")
+                      ? "bg-[#f0f7e6] text-[#8cc629]"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <LifeBuoy size={20} />
+                  <span className="font-medium">Customer Support</span>
+                </button>
+              </li>
+            )}
             {/* <li>
               <Link
                 href="/dashboard/help-center"

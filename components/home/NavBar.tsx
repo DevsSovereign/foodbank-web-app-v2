@@ -20,7 +20,7 @@ import { useSupportChat } from "@/hooks/useSupportChat";
 
 export default function NavBar({ breadcrumb }: { breadcrumb?: string }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const openSupport = useSupportChat();
+  const { open: openSupport, isLoggedIn } = useSupportChat();
 
   let toggleMobileSidebar: (() => void) | undefined;
 
@@ -61,14 +61,16 @@ export default function NavBar({ breadcrumb }: { breadcrumb?: string }) {
             Food Order
           </Link> */}
 
-          <button
-            type="button"
-            onClick={openSupport}
-            className="hidden md:flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#6cc200] transition font-medium"
-          >
-            <Headset className="size-4" />
-            Customer Support
-          </button>
+          {isLoggedIn && (
+            <button
+              type="button"
+              onClick={openSupport}
+              className="hidden md:flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#6cc200] transition font-medium"
+            >
+              <Headset className="size-4" />
+              Customer Support
+            </button>
+          )}
 
           {/* <Link
             href="/dashboard/help-center"
@@ -99,13 +101,15 @@ export default function NavBar({ breadcrumb }: { breadcrumb?: string }) {
           >
             <UtensilsCrossed className="size-4" /> Food Order
           </Link> */}
-          <button
-            type="button"
-            onClick={openSupport}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
-          >
-            <Headset className="size-4" /> Customer Support
-          </button>
+          {isLoggedIn && (
+            <button
+              type="button"
+              onClick={openSupport}
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
+            >
+              <Headset className="size-4" /> Customer Support
+            </button>
+          )}
           {/* <Link
             href="/dashboard/help-center"
             className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"

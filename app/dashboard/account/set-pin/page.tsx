@@ -9,7 +9,7 @@ import { useSupportChat } from "@/hooks/useSupportChat";
 
 export default function SetPinPage() {
   const { toast } = useToast();
-  const openSupport = useSupportChat();
+  const { open: openSupport, isLoggedIn } = useSupportChat();
   const [pin, setPin] = useState(["", "", "", ""]);
   const [confirmPin, setConfirmPin] = useState(["", "", "", ""]);
   const [step, setStep] = useState(1); // 1: initial, 2: confirm, 3: success
@@ -142,13 +142,15 @@ export default function SetPinPage() {
       <div className="mt-8 text-center">
         <p className="text-xs text-gray-400">
           If you&apos;re having trouble, please contact our{" "}
-          <button
-            type="button"
-            onClick={openSupport}
-            className="text-[#8cc629] hover:underline"
-          >
-            Support Team
-          </button>
+          {isLoggedIn && (
+            <button
+              type="button"
+              onClick={openSupport}
+              className="text-[#8cc629] hover:underline"
+            >
+              Support Team
+            </button>
+          )}
         </p>
       </div>
     </div>

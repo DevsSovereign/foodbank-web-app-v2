@@ -9,7 +9,7 @@ export function useSupportChat() {
   const router = useRouter();
   const { user } = useUserStore();
 
-  return useCallback(() => {
+  const open = useCallback(() => {
     if (!user) {
       router.push("/login");
       return;
@@ -17,4 +17,6 @@ export function useSupportChat() {
 
     openTawkChat();
   }, [user, router]);
+
+  return { open, isLoggedIn: Boolean(user) };
 }

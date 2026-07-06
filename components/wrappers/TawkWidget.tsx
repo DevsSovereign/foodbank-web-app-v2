@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useUserStore } from "@/store/useUserStore";
 import { TAWK_SRC } from "@/lib/config";
 
-// Window.Tawk_API typing lives in "@/lib/tawk" (global augmentation).
 const TAWK_SCRIPT_ID = "tawk-to-script";
 
 export default function TawkWidget() {
@@ -13,21 +12,17 @@ export default function TawkWidget() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (!user) {
-      return window.Tawk_API?.hideWidget?.();
-    }
-
-    const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
-
-    // Already injected — just reveal it (e.g. user logged back in).
     if (document.getElementById(TAWK_SCRIPT_ID)) {
       window.Tawk_API?.showWidget?.();
       return;
     }
 
-    // Prefill visitor identity BEFORE the embed loads — required for it to apply.
-    window.Tawk_API = window.Tawk_API || {};
-    window.Tawk_API.visitor = { name: fullName || user.email, email: user.email };
+    // Prefill visitor identity BEFORE the embed loads (only if we have a user).
+    if (user) {
+      const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+      window.Tawk_API = window.Tawk_API || {};
+      window.Tawk_API.visitor = { name: fullName || user.email, email: user.email };
+    }
     window.Tawk_LoadStart = new Date();
 
     const script = document.createElement("script");

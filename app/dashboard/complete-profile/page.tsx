@@ -9,6 +9,7 @@ import { handleError } from "@/lib/handle-error";
 import { userService } from "@/lib/services/user.service";
 import { autocompletePlaces } from "@/functions/locationAutoComplete";
 import { useGetCustomer } from "@/lib/queries";
+import { GOOGLE_MAPS_API_KEY } from "@/lib/config";
 
 type PlaceSuggestion = {
   placeId: string;
@@ -62,7 +63,7 @@ export default function CompleteProfilePage() {
       try {
         const results = await autocompletePlaces({
           input: value,
-          apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+          apiKey: GOOGLE_MAPS_API_KEY,
         });
         if (reqId !== requestIdRef.current) return;
         setSuggestions(results);

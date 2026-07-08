@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Star } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { TrackOrderResponse } from "@/types/user";
+import { useSupportChat } from "@/hooks/useSupportChat";
 import { formatDate, formatDateOnly, formatTimeOnly } from "@/functions/formatDate";
 
 const STEPS = [
@@ -43,7 +44,7 @@ export default function TrackDeliveryDetailsPage() {
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [feedback, setFeedback] = useState("");
-  const router = useRouter();
+  const { open: openSupport, isLoggedIn } = useSupportChat();
 
   const { order, message } = JSON.parse(useSearchParams().get("tracker") ?? "{}") as {
     order: TrackOrderResponse;
@@ -218,12 +219,14 @@ export default function TrackDeliveryDetailsPage() {
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-4 w-full">
-        <button
-          onClick={() => router.push("/dashboard/support")}
-          className="flex-1 bg-[#8cc629] hover:bg-[#7ab824] text-white font-bold py-3.5 px-6 rounded-lg transition-colors shadow-sm text-sm"
-        >
-          Contact Support
-        </button>
+        {isLoggedIn && (
+          <button
+            onClick={openSupport}
+            className="flex-1 bg-[#8cc629] hover:bg-[#7ab824] text-white font-bold py-3.5 px-6 rounded-lg transition-colors shadow-sm text-sm"
+          >
+            Contact Support
+          </button>
+        )}
         {order.status === "completed" && (
           <button
             onClick={() => setIsRateModalOpen(true)}

@@ -4,11 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Home, ArrowRight } from "lucide-react";
+import { useSupportChat } from "@/hooks/useSupportChat";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
 
 export default function OrderSuccessPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { open: openSupport, isLoggedIn } = useSupportChat();
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -94,28 +96,31 @@ export default function OrderSuccessPage() {
               Track Order
             </Link>
 
-            <Link
-              href="#"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {isLoggedIn && (
+              <button
+                type="button"
+                onClick={openSupport}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
               >
-                <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-              </svg>
-              Customer Support
-            </Link>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+                  <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+                </svg>
+                Customer Support
+              </button>
+            )}
 
-            <Link
+            {/* <Link
               href="#"
               className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
             >
@@ -135,7 +140,7 @@ export default function OrderSuccessPage() {
                 <path d="M12 8h.01" />
               </svg>
               Help Center
-            </Link>
+            </Link> */}
           </div>
         </div>
       </nav>

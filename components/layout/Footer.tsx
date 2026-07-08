@@ -1,3 +1,5 @@
+"use client";
+
 import { Facebook, Instagram } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -43,11 +45,16 @@ export default function Footer() {
                 Home
               </Link>
             </li>
+            <li>
+              <Link href="/search" className="text-sm text-gray-400 hover:text-white transition">
+                Products
+              </Link>
+            </li>
           </ul>
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-4">Stay Updated</h3>
+          {/* <h3 className="text-lg font-semibold mb-4">Stay Updated</h3>
           <p className="text-sm text-gray-400 mb-4">
             Subscribe to our newsletter for the latest updates, stories, and ways you can help make
             a difference in our community.
@@ -61,16 +68,31 @@ export default function Footer() {
             <button className="bg-[#21a84f] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600 transition">
               Subscribe
             </button>
-          </div>
+          </div> */}
 
           <h3 className="text-lg font-semibold mb-4">Social links:</h3>
           <div className="flex space-x-3 mb-6">
-            <div className="size-8 rounded-full bg-blue-600 flex items-center justify-center cursor-pointer hover:bg-blue-700 transition">
+            <button
+              onClick={() => {
+                if (typeof window === "undefined") return;
+                window.open("https://www.facebook.com/share/1CtFrhRvBG/", "_blank");
+              }}
+              className="size-8 rounded-full bg-blue-600 flex items-center justify-center cursor-pointer hover:bg-blue-700 transition"
+            >
               <Facebook className="size-4 fill-current" />
-            </div>
-            <div className="size-8 rounded-full bg-orange-500 flex items-center justify-center cursor-pointer hover:bg-orange-600 transition">
+            </button>
+            <button
+              onClick={() => {
+                if (typeof window === "undefined") return;
+                window.open(
+                  "https://www.instagram.com/foodbankltd?igsh=MWoxbWJjejU4NWh6dg==",
+                  "_blank",
+                );
+              }}
+              className="size-8 rounded-full bg-orange-500 flex items-center justify-center cursor-pointer hover:bg-orange-600 transition"
+            >
               <Instagram className="size-4" />
-            </div>
+            </button>
           </div>
 
           <div>

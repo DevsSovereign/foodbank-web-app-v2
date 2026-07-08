@@ -72,6 +72,10 @@ export const cartService = {
     return apiClient.post<AddToCartResponse>(`/addToCart?${qs}`, data);
   },
 
+  async updateCartItem(data: AddToCartRequest): Promise<AddToCartResponse> {
+    return apiClient.post<AddToCartResponse>(`/updateCartItem`, data);
+  },
+
   async checkFirstOrder({ userId }: { userId: string }) {
     return await apiClient.get<UserFirstOrder>(`/checkUserHasOrder/${userId}`);
   },
@@ -85,6 +89,6 @@ export const cartService = {
   },
 
   async outrightSubtractFromWalletById(payload: { amountPay: number }) {
-     return await apiClient.post("/OutrightSubtractFromWalletById", payload);
+    return await apiClient.post("/OutrightSubtractFromWalletById", payload);
   },
 };

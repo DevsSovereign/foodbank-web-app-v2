@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Home, Loader2, Search } from "lucide-react";
 import TopRibbon from "@/components/layout/TopRibbon";
 import Header from "@/components/layout/Header";
@@ -16,12 +16,14 @@ import ErrorSection from "@/components/ui/ErrorSection";
 import { handleError } from "@/lib/handle-error";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import { queryKeys, useCheckFirstOrder, useGetAllFees, useGetCartItems } from "@/lib/queries";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import SubHeader from "@/components/sub-header";
 import useUserLocation from "@/hooks/useUserLocation";
 import { useUserStore } from "@/store/useUserStore";
 import CartTotal from "./cart-totals/CartTotal";
 import ShoppingCart from "./shopping-cart/ShoppingCart";
+
+const DEBOUNCE_MS = 500;
 
 export default function CartPage() {
   const { user, userEligibles, adminGamifiedEnabled } = useUserStore();
@@ -41,6 +43,12 @@ export default function CartPage() {
   });
   const { customerState } = useUserLocation({ isDetectAddress: true });
   const queryClient = useQueryClient();
+
+  // Per-item accumulated quantity deltas, debounced so rapid +/- clicks
+  // collapse into a single request instead of hammering the endpoint.
+  const pendingDeltas = useRef<
+    Map<string, { delta: number; timer: ReturnType<typeof setTimeout> }>
+  >(new Map());
 
   const locationFee = useMemo(() => {
     return allFeesResponse?.allfees?.find((fee) => {
@@ -65,17 +73,49 @@ export default function CartPage() {
 
   const isEmpty = cartItems.length === 0;
 
+  const { mutate: updateCartItemMutate } = useMutation({
+    mutationFn: cartService.updateCartItem,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [queryKeys.getCart] });
+    },
+    onError: () => {
+      const items = (cartItemsResponse?.data ?? []).map(toCartItem);
+      setCartItems(items);
+      toast({ variant: "error", title: "Failed to update item. Please try again." });
+    },
+  });
+
+  const flushDelta = (id: string) => {
+    const entry = pendingDeltas.current.get(id);
+    if (!entry) return;
+    pendingDeltas.current.delete(id);
+    if (entry.delta === 0) return;
+    updateCartItemMutate({ productId: id, quantity: entry.delta });
+  };
+
   const updateQuantity = (id: string, delta: number) => {
+    const current = cartItems.find((item) => item.productId === id);
+    if (!current) return;
+
+    const newQty = Math.max(1, current.quantity + delta);
+    const effectiveDelta = newQty - current.quantity;
+    if (effectiveDelta === 0) return;
+
     setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item,
-      ),
+      prev.map((item) => (item.productId === id ? { ...item, quantity: newQty } : item)),
     );
+
+    const existing = pendingDeltas.current.get(id);
+    if (existing) clearTimeout(existing.timer);
+
+    const accumulated = (existing?.delta ?? 0) + effectiveDelta;
+    const timer = setTimeout(() => flushDelta(id), DEBOUNCE_MS);
+    pendingDeltas.current.set(id, { delta: accumulated, timer });
   };
 
   const removeItem = async (id: string) => {
     // Optimistic removal — instantly update the UI
-    const previousItems = cartItems;
+    const previousItems = [...cartItems];
     setCartItems((prev) => prev.filter((item) => item.id !== id));
 
     try {
@@ -96,6 +136,21 @@ export default function CartPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCartItems(items);
   }, [cartItemsResponse]);
+
+  // Flush any pending quantity changes on unmount so nothing is lost when the
+  // user navigates away before the debounce timer fires.
+  useEffect(() => {
+    const pending = pendingDeltas.current;
+    return () => {
+      pending.forEach((entry, id) => {
+        clearTimeout(entry.timer);
+        if (entry.delta !== 0) {
+          cartService.updateCartItem({ productId: id, quantity: entry.delta }).catch(() => {});
+        }
+      });
+      pending.clear();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-white">

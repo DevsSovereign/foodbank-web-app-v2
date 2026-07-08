@@ -2,24 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Loader2 } from "lucide-react";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useUserStore } from "@/store/useUserStore";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { paymentService } from "@/lib/services/payment.service";
+import { handleError } from "@/lib/handle-error";
 
-/** Flat transaction fee (Naira) added on top of the amount the user sends. */
 const FLAT_FEE = 50;
 
-const formatNaira = (value: number) => `N${value.toLocaleString("en-NG")}`;
+const formatNaira = (value: number) => `₦${value.toLocaleString("en-NG")}`;
 
 interface FundWalletDetailsProps {
   accountName: string;
   accountNumber: string;
   bankName: string;
-  /** Amount the user chose to send (from the Amount modal). */
   amount: number;
-  /** Show the expiry countdown (Temporary Virtual Account). Omit for Permanent. */
   showCountdown?: boolean;
-  /** Initial countdown duration in seconds. Defaults to 23:56:17 (matches design). */
-  initialSeconds?: number;
+  expiresAt?: string;
+  reference?: string;
 }
 
 const formatTime = (seconds: number) => {
@@ -31,17 +32,28 @@ const formatTime = (seconds: number) => {
     .padStart(2, "0")}`;
 };
 
+/** Seconds remaining until `expiresAt`, clamped at 0. */
+const remainingSeconds = (expiresAt?: string) => {
+  if (!expiresAt) return 0;
+  const diffMs = new Date(expiresAt).getTime() - Date.now();
+  return Number.isNaN(diffMs) ? 0 : Math.max(0, Math.floor(diffMs / 1000));
+};
+
 export default function FundWalletDetails({
   accountName,
   accountNumber,
   bankName,
   amount,
   showCountdown = false,
-  initialSeconds = 23 * 3600 + 56 * 60 + 17,
+  expiresAt,
+  reference,
 }: FundWalletDetailsProps) {
   const router = useRouter();
   const { copy, copied } = useCopyToClipboard();
-  const [timeLeft, setTimeLeft] = useState(initialSeconds);
+  const { user } = useUserStore();
+  const { toast } = useToast();
+  const [timeLeft, setTimeLeft] = useState(() => remainingSeconds(expiresAt));
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const total = amount + FLAT_FEE;
   const amountEntered = formatNaira(amount);
@@ -51,10 +63,34 @@ export default function FundWalletDetails({
   useEffect(() => {
     if (!showCountdown) return;
     const interval = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setTimeLeft(remainingSeconds(expiresAt));
     }, 1000);
     return () => clearInterval(interval);
-  }, [showCountdown]);
+  }, [showCountdown, expiresAt]);
+
+  const handleConfirmTransfer = async () => {
+    // No reference (e.g. permanent account) — nothing to verify, just leave.
+    if (!reference) {
+      router.replace("/dashboard");
+      return;
+    }
+
+    if (!user?._id) {
+      toast({ variant: "error", title: "You must be logged in to confirm a transfer." });
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      await paymentService.verifyBankTransfer({ userId: user._id, reference });
+      toast({ variant: "success", title: "Payment confirmed. Your wallet will update shortly." });
+      router.replace("/dashboard");
+    } catch (err) {
+      toast({ variant: "error", title: handleError(err, "Could not verify payment yet.") });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   return (
     <div className="w-full max-w-3xl">
@@ -136,10 +172,12 @@ export default function FundWalletDetails({
       {/* Action Button */}
       <div className="w-full max-w-162.5">
         <button
-          onClick={() => router.push("/dashboard")}
-          className="w-full flex justify-center items-center bg-[#8cc629] hover:bg-[#7db424] text-white py-4 font-bold text-[12px] uppercase tracking-wider transition-colors"
+          onClick={handleConfirmTransfer}
+          disabled={isVerifying}
+          className="w-full flex justify-center items-center gap-2 bg-[#8cc629] hover:bg-[#7db424] text-white py-4 font-bold text-[12px] uppercase tracking-wider transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          I HAVE TRANSFERRED THE MONEY
+          {isVerifying && <Loader2 className="size-4 animate-spin" />}
+          {isVerifying ? "VERIFYING..." : "I HAVE TRANSFERRED THE MONEY"}
         </button>
       </div>
     </div>

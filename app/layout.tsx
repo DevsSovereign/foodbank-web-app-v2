@@ -27,7 +27,6 @@ export default function RootLayout({
 
       <body className="font-sans antialiased">
         <AosInit />
-
         <Providers>{children}</Providers>
       </body>
     </html>

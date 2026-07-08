@@ -5,6 +5,7 @@ import ToastProvider from "@/components/ui/toast/ToastProvider";
 import useScrollToTop from "@/hooks/useScrollToTop";
 import { ReactNode } from "react";
 import CustomerDataProvider from "./CustomerData";
+import TawkWidget from "./TawkWidget";
 
 const queryClient = new QueryClient();
 
@@ -15,7 +16,10 @@ export default function ClientProvider({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <CustomerDataProvider>{children}</CustomerDataProvider>
+        <CustomerDataProvider>
+          {children}
+          <TawkWidget />
+        </CustomerDataProvider>
       </ToastProvider>
     </QueryClientProvider>
   );

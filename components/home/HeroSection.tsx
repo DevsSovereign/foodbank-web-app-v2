@@ -35,10 +35,10 @@ export default function HeroSection() {
                 with flexible plans that fit your budget.
               </p>
               <button
+                onClick={() => router.push("/search")}
                 className="w-full bg-white text-[#2f9d58] py-3 rounded-lg text-[15px] font-bold shadow-sm hover:bg-gray-50 transition mt-auto tracking-wide cursor-pointer"
-                onClick={() => setIsAuthModalOpen(true)}
               >
-                Buy Now, Pay Later
+                Order Now
               </button>
             </div>
           </div>
@@ -54,15 +54,18 @@ export default function HeroSection() {
                 FoodbankGo is our restaurant ordering app. Download it to order meals from nearby
                 restaurants.
               </p>
-              <button className="flex items-center justify-center gap-2 bg-white text-[#f57422] px-4 py-2.5 rounded-lg text-[13px] font-bold shadow-sm hover:bg-gray-50 transition w-fit tracking-wide cursor-pointer">
-                <Image
+              <button
+                disabled
+                className="flex items-center disabled:cursor-auto justify-center gap-2 bg-white text-[#f57422] px-4 py-2.5 rounded-lg text-[13px] font-bold shadow-sm hover:bg-gray-50 transition w-fit tracking-wide cursor-pointer"
+              >
+                {/* <Image
                   src="/assets/picon_playstore.svg"
                   alt="PlayStore"
                   width={14}
                   height={14}
                   className="object-contain"
-                />
-                Download App
+                /> */}
+                Coming Soon
               </button>
             </div>
 

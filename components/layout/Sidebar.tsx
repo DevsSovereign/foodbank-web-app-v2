@@ -16,7 +16,7 @@ import {
   // Gift,
   HelpCircle,
   LifeBuoy,
-  HeadphonesIcon,
+  // HeadphonesIcon,
   LogOut,
   ChevronDown,
   ChevronUp,
@@ -29,18 +29,21 @@ import { clearAuthToken } from "@/lib/auth-utils";
 import { useUserStore } from "@/store/useUserStore";
 import { getGreeting } from "../functions/greetings";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSupportChat } from "@/hooks/useSupportChat";
 
 export default function Sidebar() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const { isMobileSidebarOpen, closeMobileSidebar, toggleMobileSidebar } = useSidebar();
   const pathname = usePathname();
   const { user, clearUserStore } = useUserStore();
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   // Derive display name from email (before the @)
   const displayName = user?.firstName || user?.email?.split("@")[0] || "User";
 
   const isActive = (path: string) => pathname?.startsWith(path);
+
+  const { open: openSupport, isLoggedIn } = useSupportChat();
 
   const handleLogout = async () => {
     if (typeof window === "undefined") return;
@@ -330,7 +333,23 @@ export default function Sidebar() {
             </h3>
           </div>
           <ul className="space-y-1">
-            <li>
+            {isLoggedIn && (
+              <li>
+                <button
+                  type="button"
+                  onClick={openSupport}
+                  className={`flex w-full items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                    isActive("/dashboard/help-center")
+                      ? "bg-[#f0f7e6] text-[#8cc629]"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <LifeBuoy size={20} />
+                  <span className="font-medium">Customer Support</span>
+                </button>
+              </li>
+            )}
+            {/* <li>
               <Link
                 href="/dashboard/help-center"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
@@ -355,7 +374,7 @@ export default function Sidebar() {
                 <HeadphonesIcon size={20} />
                 <span className="font-medium">Support</span>
               </Link>
-            </li>
+            </li> */}
           </ul>
         </nav>
 

@@ -20,6 +20,7 @@ import { CreateOrderPayload } from "@/types/cart";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import { queryKeys, useGetCustomer, useGetUserCheckoutGamification } from "@/lib/queries";
 import { useRouter } from "next/navigation";
+import { useSupportChat } from "@/hooks/useSupportChat";
 import useGetCheckoutTotal from "@/hooks/useGetCheckoutTotal";
 import { removeFromStorage } from "@/lib/auth-utils";
 import { useRewardStore } from "@/store/useRewardStore";
@@ -52,6 +53,7 @@ function CheckoutPageContent() {
   const { data: checkoutGamification } = useGetUserCheckoutGamification({ amountToPay: amountPay });
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { open: openSupport, isLoggedIn } = useSupportChat();
 
   // Checkout Spin & Win eligibility — mirrors the home page's gamification gate.
   const checkoutCategoryEligible =
@@ -256,28 +258,31 @@ function CheckoutPageContent() {
               Track Order
             </Link>
 
-            <Link
-              href="/dashboard/support"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {isLoggedIn && (
+              <button
+                type="button"
+                onClick={openSupport}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
               >
-                <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-              </svg>
-              Customer Support
-            </Link>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+                  <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+                </svg>
+                Customer Support
+              </button>
+            )}
 
-            <Link
+            {/* <Link
               href="/dashboard/help-center"
               className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#6cc200] transition font-medium"
             >
@@ -297,7 +302,7 @@ function CheckoutPageContent() {
                 <path d="M12 8h.01" />
               </svg>
               Help Center
-            </Link>
+            </Link> */}
           </div>
         </div>
 
@@ -357,27 +362,30 @@ function CheckoutPageContent() {
               </svg>
               Track Order
             </Link>
-            <Link
-              href="/dashboard/support"
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {isLoggedIn && (
+              <button
+                type="button"
+                onClick={openSupport}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
               >
-                <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-              </svg>
-              Customer Support
-            </Link>
-            <Link
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+                  <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+                </svg>
+                Customer Support
+              </button>
+            )}
+            {/* <Link
               href="/dashboard/help-center"
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
             >
@@ -397,7 +405,7 @@ function CheckoutPageContent() {
                 <path d="M12 8h.01" />
               </svg>
               Help Center
-            </Link>
+            </Link> */}
           </div>
         )}
       </nav>

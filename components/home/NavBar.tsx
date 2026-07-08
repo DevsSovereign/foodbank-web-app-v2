@@ -16,9 +16,11 @@ import Image from "next/image";
 import { useState } from "react";
 import { useSidebar } from "../layout/SidebarContext";
 import CategoryDropdown from "../layout/CategoryDropdown";
+import { useSupportChat } from "@/hooks/useSupportChat";
 
 export default function NavBar({ breadcrumb }: { breadcrumb?: string }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { open: openSupport, isLoggedIn } = useSupportChat();
 
   let toggleMobileSidebar: (() => void) | undefined;
 
@@ -59,21 +61,24 @@ export default function NavBar({ breadcrumb }: { breadcrumb?: string }) {
             Food Order
           </Link> */}
 
-          <Link
-            href="/dashboard/support"
-            className="hidden md:flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#6cc200] transition font-medium"
-          >
-            <Headset className="size-4" />
-            Customer Support
-          </Link>
+          {isLoggedIn && (
+            <button
+              type="button"
+              onClick={openSupport}
+              className="hidden md:flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#6cc200] transition font-medium"
+            >
+              <Headset className="size-4" />
+              Customer Support
+            </button>
+          )}
 
-          <Link
+          {/* <Link
             href="/dashboard/help-center"
             className="hidden md:flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#6cc200] transition font-medium"
           >
             <Info className="size-4" />
             Help Center
-          </Link>
+          </Link> */}
 
           <button
             className="md:hidden ml-auto text-gray-600 cursor-pointer"
@@ -96,18 +101,21 @@ export default function NavBar({ breadcrumb }: { breadcrumb?: string }) {
           >
             <UtensilsCrossed className="size-4" /> Food Order
           </Link> */}
-          <Link
-            href="/dashboard/support"
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
-          >
-            <Headset className="size-4" /> Customer Support
-          </Link>
-          <Link
+          {isLoggedIn && (
+            <button
+              type="button"
+              onClick={openSupport}
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
+            >
+              <Headset className="size-4" /> Customer Support
+            </button>
+          )}
+          {/* <Link
             href="/dashboard/help-center"
             className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6cc200] transition"
           >
             <Info className="size-4" /> Help Center
-          </Link>
+          </Link> */}
         </div>
       )}
     </nav>

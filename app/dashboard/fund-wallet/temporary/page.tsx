@@ -18,7 +18,7 @@ export default function TemporaryVirtualAccountPage() {
   const { toast } = useToast();
 
   const [account, setAccount] = useState<BankTransferAccount | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Generate a one-time account for this payment. Runs once the amount and the
   // user's email are available; redirects back if the amount is missing.
@@ -38,9 +38,15 @@ export default function TemporaryVirtualAccountPage() {
         const result = await paymentService.createBankTransferAccount({
           amount,
           email: user.email,
-          mode: "backend",
+          mode: "paystack",
+          metadata: {
+            source: "foodbank_add_fund",
+            paymentPurpose: "general_wallet_topup",
+            amount,
+          },
         });
         if (!active) return;
+
         setAccount(result);
       } catch (err) {
         if (!active) return;

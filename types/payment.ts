@@ -13,9 +13,7 @@ export interface BankTransferAccount {
   bankName: string;
   accountName: string;
   fee: number;
-  /** ISO timestamp when a one-time account expires (drives the countdown). */
   expiresAt?: string;
-  /** Provider reference used later to verify the transfer. */
   reference?: string;
 }
 

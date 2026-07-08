@@ -11,7 +11,7 @@ import { handleError } from "@/lib/handle-error";
 
 const FLAT_FEE = 50;
 
-const formatNaira = (value: number) => `N${value.toLocaleString("en-NG")}`;
+const formatNaira = (value: number) => `₦${value.toLocaleString("en-NG")}`;
 
 interface FundWalletDetailsProps {
   accountName: string;

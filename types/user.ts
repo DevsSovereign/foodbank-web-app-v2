@@ -273,6 +273,8 @@ export interface RewardHistory {
   promoCodeDetails: { amount: number; code: string; discount: number | null };
   source: GamificationRewardType;
   usedAt: string;
+  /*solely for promo code reward gotten from storage*/
+  amount: number;
 }
 
 export type GamificationPresentationType = "banner" | "modal" | "inline";

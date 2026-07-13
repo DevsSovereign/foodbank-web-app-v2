@@ -43,14 +43,12 @@ export default function RewardHistoryPage() {
   const rewards = rewardHistoryData?.items ?? [];
   const hasRewards = rewards.length > 0;
 
-  const isRewardSelected = (reward: RewardHistory) =>
-    selectedRewards.some((r) => r._id === reward._id);
+  const isRewardSelected = (reward: RewardHistory) => {
+    return selectedRewards.some((r) => r._id === reward._id);
+  };
 
   const closeModal = () => setSelectedReward(null);
 
-  /** Note: Selecting a reward stores it for the next checkout, where it is consumed
-  (via the order's gamified payload) and then cleared. Toggling again
-  de-selects it. Multiple rewards can be selected at once. */
   const handleToggleReward = (reward: RewardHistory) => {
     const wasSelected = isRewardSelected(reward);
     toggleSelectedReward(reward);
@@ -233,10 +231,12 @@ export default function RewardHistoryPage() {
                     {formatDate(selectedReward.wonOn)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[#2a9d5c] text-[13px] font-medium">Status:</span>
-                  <StatusBadge status={selectedReward.status} />
-                </div>
+                {selectedReward.source !== "checkoutCategory" && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#2a9d5c] text-[13px] font-medium">Status:</span>
+                    <StatusBadge status={selectedReward.status} />
+                  </div>
+                )}
                 {selectedReward.status === "used" && (
                   <div className="flex justify-between items-center border-b border-[#e2efe6] pb-4">
                     <span className="text-[#2a9d5c] text-[13px] font-medium">Used On:</span>
@@ -247,8 +247,8 @@ export default function RewardHistoryPage() {
                 )}
               </div>
 
-              {/* Use / Remove toggle — only for active rewards */}
-              {isActiveStatus(selectedReward.status) &&
+              {selectedReward.rewardType !== "checkoutCategory" &&
+                isActiveStatus(selectedReward.status) &&
                 (isRewardSelected(selectedReward) ? (
                   <button
                     onClick={() => handleToggleReward(selectedReward)}

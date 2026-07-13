@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import FundWalletDetails from "@/components/dashboard/FundWalletDetails";
 import LoaderSection from "@/components/ui/Loader";
 import { paymentService } from "@/lib/services/payment.service";
@@ -16,12 +17,20 @@ export default function TemporaryVirtualAccountPage() {
   const amount = Number(searchParams.get("amount"));
   const { user } = useUserStore();
   const { toast } = useToast();
-
+  const hasGeneratedRef = useRef(false);
   const [account, setAccount] = useState<BankTransferAccount | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Generate a one-time account for this payment. Runs once the amount and the
-  // user's email are available; redirects back if the amount is missing.
+  const { mutate: generateAccount } = useMutation({
+    mutationFn: paymentService.createBankTransferAccount,
+    onSuccess: (data) => {
+      setAccount(data);
+    },
+    onError: (err) => {
+      toast({ variant: "error", title: handleError(err, "Failed to generate account.") });
+      router.replace("/dashboard/fund-wallet");
+    },
+  });
+
   useEffect(() => {
     if (!amount || amount <= 0) {
       router.replace("/dashboard/fund-wallet");
@@ -30,41 +39,22 @@ export default function TemporaryVirtualAccountPage() {
 
     if (!user?.email) return;
 
-    let active = true;
+    if (hasGeneratedRef.current) return;
+    hasGeneratedRef.current = true;
 
-    const generate = async () => {
-      setIsLoading(true);
-      try {
-        const result = await paymentService.createBankTransferAccount({
-          amount,
-          email: user.email,
-          mode: "paystack",
-          metadata: {
-            source: "foodbank_add_fund",
-            paymentPurpose: "general_wallet_topup",
-            amount,
-          },
-        });
-        if (!active) return;
+    generateAccount({
+      amount,
+      email: user.email,
+      mode: "paystack",
+      metadata: {
+        source: "foodbank_add_fund",
+        paymentPurpose: "general_wallet_topup",
+        amount,
+      },
+    });
+  }, [amount, user?.email, router, generateAccount]);
 
-        setAccount(result);
-      } catch (err) {
-        if (!active) return;
-        toast({ variant: "error", title: handleError(err, "Failed to generate account.") });
-        router.replace("/dashboard/fund-wallet");
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    };
-
-    generate();
-
-    return () => {
-      active = false;
-    };
-  }, [amount, user?.email, router, toast]);
-
-  if (isLoading || !account) return <LoaderSection />;
+  if (!account) return <LoaderSection />;
 
   return (
     <FundWalletDetails

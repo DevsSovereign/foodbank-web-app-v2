@@ -22,12 +22,6 @@ const expiresAtISO = () => new Date(Date.now() + TOTAL_TIME_SECONDS * 1000).toIS
  * browser — see the security note in `providers/paystack.service.ts`.
  */
 export const paymentService = {
-  /**
-   * Generate a temporary bank-transfer account for a single payment.
-   *
-   * - `paystack` → `POST https://api.paystack.co/charge`
-   * - `backend`  → `POST /payments/bank-transfer`
-   */
   async createBankTransferAccount(
     payload: CreateBankTransferPayload,
   ): Promise<BankTransferAccount> {
@@ -58,14 +52,16 @@ export const paymentService = {
       };
     }
 
-    // Backend mode: our API talks to the provider and keeps the secret server-side.
-    const res = await apiClient.post<{ data?: BackendBankTransferData }>("/payments/bank-transfer", {
-      amount: payload.amount,
-      email: payload.email,
-      expiresInSeconds: TOTAL_TIME_SECONDS,
-      fee: FEE,
-      metadata: payload.metadata ?? {},
-    });
+    const res = await apiClient.post<{ data?: BackendBankTransferData }>(
+      "/payments/bank-transfer",
+      {
+        amount: payload.amount,
+        email: payload.email,
+        expiresInSeconds: TOTAL_TIME_SECONDS,
+        fee: FEE,
+        metadata: payload.metadata ?? {},
+      },
+    );
 
     const d = res?.data;
 
@@ -79,19 +75,11 @@ export const paymentService = {
     };
   },
 
-  /**
-   * Confirm a bank transfer once the user says they've paid.
-   *
-   * Endpoint: **GET /checkAddFundStatus?userId=...&tx_ref=...**
-   */
-  verifyBankTransfer(payload: VerifyBankTransferPayload) {
-    const qs = new URLSearchParams({
-      userId: payload.userId,
-      tx_ref: payload.reference,
-    }).toString();
+  async verifyBankTransfer(payload: VerifyBankTransferPayload) {
+    const res = await apiClient.get<{ status: "pending" | "success" }>(
+      `/checkAddFundStatus?userId=${payload.userId}&tx_ref=${payload.reference}`,
+    );
 
-    return apiClient.get(`/checkAddFundStatus?${qs}`, {
-      headers: { "x-no-loader": "1" },
-    });
+    return res;
   },
 };

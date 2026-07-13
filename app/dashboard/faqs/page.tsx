@@ -6,7 +6,6 @@ import { useGetFAQs } from "@/lib/queries";
 import ErrorSection from "@/components/ui/ErrorSection";
 import LoaderSection from "@/components/ui/Loader";
 import EmptyState from "@/components/ui/EmptyState";
-import { useRouter } from "next/navigation";
 
 const FAQS = [
   {
@@ -55,7 +54,6 @@ export default function FaqsPage() {
     error: faqError,
     refetch: refetchFAQ,
   } = useGetFAQs();
-  const router = useRouter();
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
@@ -119,7 +117,7 @@ export default function FaqsPage() {
         </div>
       </div>
 
-      <div className="border-2 border-dashed border-red-100 rounded-xl p-8 bg-white/50">
+      {/* <div className="border-2 border-dashed border-red-100 rounded-xl p-8 bg-white/50">
         <h3 className="text-base font-bold text-gray-900 mb-2">Still Struck?</h3>
         <p className="text-gray-500 text-sm mb-6">
           Can&apos;t find the answer you&apos;re looking for? Send us a message and our support team
@@ -131,7 +129,7 @@ export default function FaqsPage() {
         >
           Send a Message
         </button>
-      </div>
+      </div> */}
     </div>
   );
 }

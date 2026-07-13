@@ -68,7 +68,7 @@ export function getFreeDeliveryDiscount(reward: RewardHistory | null, deliveryFe
 /** A Promo Code reward grants its numeric discount, capped at the total. */
 export function getPromoDiscount(reward: RewardHistory | null, total: number): number {
   if (!reward) return 0;
-  return Math.min(Math.max(reward.discountSpinDiscount ?? 0, 0), total);
+  return Math.min(Math.max((reward.discountSpinDiscount || reward.amount) ?? 0, 0), total);
 }
 
 /**

@@ -31,9 +31,10 @@ export default function CartTotal({
     mutationFn: userService.validatePromoCode,
     onSuccess: async ({ message, data }) => {
       await queryClient.invalidateQueries({
-        queryKey: [queryKeys.gamification, queryKeys.rewardHistory],
+        queryKey: [queryKeys.gamification, queryKeys.rewardHistory, queryKeys.adminConfig],
       });
       setToStorage("PROMO_CODE", JSON.stringify(data.rewardHistory.promoCodeDetails));
+      setPromoCode("");
       toast({ variant: "success", title: message });
     },
     onError: (error) => {

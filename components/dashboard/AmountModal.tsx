@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { FormEvent, useState } from "react";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 
 interface AmountModalProps {
@@ -13,14 +13,14 @@ export default function AmountModal({ isOpen, onClose, onSubmit }: AmountModalPr
   const { toast } = useToast();
   const [amount, setAmount] = useState<string>("");
 
-  if (!isOpen) return null;
-
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Digits only
     setAmount(e.target.value.replace(/\D/g, ""));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
     const value = Number(amount);
     if (!value || value <= 0) {
       return toast({ variant: "error", title: "Please enter a valid amount." });
@@ -28,6 +28,8 @@ export default function AmountModal({ isOpen, onClose, onSubmit }: AmountModalPr
     onSubmit(value);
     setAmount("");
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center  p-4">
@@ -40,7 +42,7 @@ export default function AmountModal({ isOpen, onClose, onSubmit }: AmountModalPr
       {/* Modal Content */}
 
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-[550px] overflow-hidden">
-        <div className="p-4">
+        <form onSubmit={handleSubmit} className="p-4">
           <h2 className="text-[24px] md:text-[28px] font-bold text-gray-800 text-center mb-10">
             Enter Amount
           </h2>
@@ -61,12 +63,12 @@ export default function AmountModal({ isOpen, onClose, onSubmit }: AmountModalPr
           </div>
 
           <button
-            onClick={handleSubmit}
+            type="submit"
             className="w-full bg-[#8cc629] hover:bg-[#7db424] text-white font-bold py-4 sm:py-5 rounded-xl text-[18px] md:text-[20px] transition-all active:scale-[0.98]"
           >
             Continue
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );

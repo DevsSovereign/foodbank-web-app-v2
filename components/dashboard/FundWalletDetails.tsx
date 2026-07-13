@@ -82,7 +82,15 @@ export default function FundWalletDetails({
 
     setIsVerifying(true);
     try {
-      await paymentService.verifyBankTransfer({ userId: user._id, reference });
+      const res = await paymentService.verifyBankTransfer({ userId: user._id, reference });
+      if (res.status === "pending") {
+        toast({
+          variant: "info",
+          title: "Your transaction is pending. We haven't received the payment",
+        });
+        return;
+      }
+
       toast({ variant: "success", title: "Payment confirmed. Your wallet will update shortly." });
       router.replace("/dashboard");
     } catch (err) {
@@ -152,7 +160,9 @@ export default function FundWalletDetails({
           {/* Amount Structure */}
           <div className="space-y-4">
             <div>
-              <span className="block text-[13px] text-gray-500 font-medium mb-1">Amount Entered</span>
+              <span className="block text-[13px] text-gray-500 font-medium mb-1">
+                Amount Entered
+              </span>
               <span className="text-[15px] font-bold text-gray-800">{amountEntered}</span>
             </div>
             <div>

@@ -2,26 +2,41 @@
 
 import { User, MapPin, Phone, ChevronRight, Edit } from "lucide-react";
 import type { UserResponse } from "@/types/user";
+import type { CustomerMode } from "@/types/cart";
+import { useGetPickupLocation } from "@/lib/queries";
 
 interface UserCheckoutDetailsProps {
   user: UserResponse | null;
   customerAddress: string;
   customerPhone: string;
-  selectedDeliveryDate: Date;
+  selectedPickupDate: Date | null;
+  customerMode: CustomerMode | null;
+  onCustomerModeChange: (mode: CustomerMode) => void;
   onEditCustomer: () => void;
   onEditPhone: () => void;
   onPickDate: () => void;
 }
 
+const DELIVERY_METHODS: { mode: CustomerMode; label: string }[] = [
+  { mode: "home-delivery", label: "Home Delivery" },
+  { mode: "pickup", label: "Store Pick-up" },
+];
+
 export default function UserCheckoutDetails({
   user,
   customerAddress,
   customerPhone,
-  selectedDeliveryDate,
+  selectedPickupDate,
+  customerMode,
+  onCustomerModeChange,
   onEditCustomer,
   onEditPhone,
   onPickDate,
 }: UserCheckoutDetailsProps) {
+  const { data: pickupLocation } = useGetPickupLocation({
+    enabled: customerMode === "pickup" && !!selectedPickupDate,
+  });
+
   return (
     <>
       {/* Customer Details Card */}
@@ -74,34 +89,91 @@ export default function UserCheckoutDetails({
         </div>
       </div>
 
-      {/* Delivery Details Card */}
+      {/* Delivery Method Card */}
       <div className="bg-white border border-[#f0f9e1] rounded-lg shadow-sm overflow-hidden p-6 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
-          <h2 className="text-[20px] font-bold text-gray-800">Delivery Details</h2>
-          <button
-            onClick={onPickDate}
-            className="text-[#8cc629] text-[13px] font-medium flex items-center gap-1 hover:underline"
-          >
-            Set a date from today upward <ChevronRight className="w-4 h-4" />
-          </button>
+          <h2 className="text-[20px] font-bold text-gray-800">Delivery Method</h2>
+          {customerMode === "pickup" && (
+            <button
+              onClick={onPickDate}
+              className="text-[#8cc629] text-[13px] font-medium flex items-center gap-1 hover:underline"
+            >
+              Set a date from today upward <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {selectedDeliveryDate ? (
-          <div className="border border-[#8cc629] bg-[#f4faee] rounded-md py-6 flex flex-col items-center justify-center text-center">
-            <p className="text-gray-800 font-bold mb-1.5">
-              {selectedDeliveryDate.toLocaleDateString("en-US", {
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {DELIVERY_METHODS.map(({ mode, label }) => {
+            const isSelected = customerMode === mode;
+
+            return (
+              <button
+                key={mode}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => onCustomerModeChange(mode)}
+                className={`flex items-center gap-3 px-5 py-4 rounded-md border text-left transition-colors ${
+                  isSelected
+                    ? "border-[#8cc629] bg-[#f4faee]"
+                    : "border-gray-200 bg-white hover:bg-gray-50"
+                }`}
+              >
+                <span
+                  className={`w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0 ${
+                    isSelected ? "border-4 border-[#8cc629]" : "border border-gray-300"
+                  }`}
+                >
+                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#8cc629]" />}
+                </span>
+                <span className="text-sm font-medium text-gray-800">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {customerMode === "pickup" && selectedPickupDate && (
+          <div className="mt-4 border border-[#8cc629] bg-[#f4faee] rounded-md py-4 flex flex-col items-center justify-center text-center">
+            <p className="text-gray-800 font-bold text-sm">
+              {selectedPickupDate.toLocaleDateString("en-US", {
                 weekday: "long",
                 year: "numeric",
                 month: "long",
                 day: "numeric",
               })}
             </p>
-            <p className="text-gray-500 text-xs">Door Delivery</p>
           </div>
-        ) : (
-          <div className="border border-dashed border-[#e6e6e6] bg-[#fafafa] rounded-md py-8 flex flex-col items-center justify-center text-center">
-            <p className="text-gray-700 text-sm font-medium mb-1.5">Select a day upward from today</p>
-            <p className="text-gray-400 text-xs shadow-sm">Door Delivery</p>
+        )}
+
+        {customerMode === "pickup" && selectedPickupDate && pickupLocation && (
+          <div className="mt-4 border border-[#8cc629] bg-[#f4faee] rounded-md p-4 space-y-2.5">
+            <p className="text-gray-800 font-bold text-sm text-center">
+              {pickupLocation.data.storeName}
+            </p>
+
+            <div className="flex items-start justify-center gap-2">
+              <MapPin className="text-[#8cc629] w-4 h-4 mt-0.5 shrink-0" />
+              <span className="text-gray-700 text-xs">{pickupLocation.data.address}</span>
+            </div>
+
+            {pickupLocation.data.contactInfo && (
+              <div className="flex items-center justify-center gap-2">
+                <Phone className="text-[#8cc629] w-4 h-4 shrink-0" />
+                <span className="text-gray-700 text-xs">{pickupLocation.data.contactInfo}</span>
+              </div>
+            )}
+
+            {pickupLocation.data.mapLink && (
+              <a
+                href={pickupLocation.data.mapLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#8cc629] text-xs font-medium flex items-center justify-center gap-1 hover:underline"
+              >
+                View on map <ChevronRight className="w-3.5 h-3.5" />
+              </a>
+            )}
           </div>
         )}
       </div>

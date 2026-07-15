@@ -29,6 +29,8 @@ export const queryKeys = {
   adminConfig: "adminConfig",
   rewardHistory: "rewardHistory",
   checkoutGamification: "checkoutGamification",
+  pickupCalendar: "pickupCalendar",
+  pickupLocation: "pickupLocation",
 };
 
 // queries
@@ -164,6 +166,38 @@ export const useCheckFirstOrder = ({ userId }: { userId: string }) => {
       return await cartService.checkFirstOrder({ userId });
     },
     enabled: !!userId,
+  });
+
+  return queryResult;
+};
+
+export const useGetPickupCalendar = ({
+  month,
+  enabled = true,
+}: {
+  month: string;
+  enabled?: boolean;
+}) => {
+  const token = getAuthToken();
+
+  const queryResult = useQuery({
+    queryKey: [queryKeys.pickupCalendar, month],
+    queryFn: async () => {
+      return await cartService.getPickupCalendar({ month });
+    },
+    enabled: enabled && !!token && !!month,
+  });
+
+  return queryResult;
+};
+
+export const useGetPickupLocation = ({ enabled = true }: { enabled: boolean }) => {
+  const queryResult = useQuery({
+    queryKey: [queryKeys.pickupLocation],
+    queryFn: async () => {
+      return await cartService.getPickupLocation();
+    },
+    enabled,
   });
 
   return queryResult;

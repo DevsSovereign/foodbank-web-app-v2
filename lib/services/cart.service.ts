@@ -8,6 +8,8 @@ import type {
   UserFirstOrder,
   ApplicableFees,
   CreateOrderPayload,
+  PickupDateResponse,
+  PickupLocationResponse,
 } from "@/types/cart";
 
 /**
@@ -82,6 +84,17 @@ export const cartService = {
 
   async getOrderPrices(): Promise<{ allfees: ApplicableFees[] }> {
     return await apiClient.get<{ allfees: ApplicableFees[] }>("/get-allFees");
+  },
+
+  async getPickupCalendar({ month }: { month: string }): Promise<PickupDateResponse> {
+    const qs = new URLSearchParams({ month }).toString();
+    return await apiClient.get<PickupDateResponse>(`/pickup-calendar?${qs}`);
+  },
+
+  async getPickupLocation(): Promise<{ data: PickupLocationResponse }> {
+    return await apiClient.get<{ data: PickupLocationResponse }>(
+      "/front-desk/admin/pickup-location",
+    );
   },
 
   async createOrder(payload: CreateOrderPayload) {

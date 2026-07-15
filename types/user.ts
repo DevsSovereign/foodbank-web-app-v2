@@ -1,3 +1,5 @@
+import { CustomerMode } from "./cart";
+
 export type OrderHistoryStatus =
   | "completed"
   | "cancelled"
@@ -151,6 +153,7 @@ export interface HistoryData {
   orderType: string;
   deliveryDetails: string;
   allItemsTotalPrice: number;
+  customerMode: CustomerMode;
   orderDate: string;
   deliveryFee: number;
   serviceFee: number;

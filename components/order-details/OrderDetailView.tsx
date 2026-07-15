@@ -5,6 +5,7 @@ import React from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, MapPin, Check, Clock, Phone, Mail } from "lucide-react";
 import { SingleOrderHistory } from "@/types/user";
+import type { CustomerMode } from "@/types/cart";
 import { formatDate } from "@/functions/formatDate";
 import { formatCurrency } from "@/functions/formatCurrency";
 
@@ -25,6 +26,11 @@ const STATUS_LABEL: Record<OrderDetailVariant, string> = {
   pending: "Pending",
   completed: "Completed",
   cancelled: "Cancelled",
+};
+
+const CUSTOMER_MODE_LABEL: Record<CustomerMode, string> = {
+  "home-delivery": "Home Delivery",
+  pickup: "Store Pick-up",
 };
 
 interface AccentConfig {
@@ -56,7 +62,7 @@ const ACCENT: Record<OrderDetailVariant, AccentConfig> = {
     mobileLine: "border-[#8cc629]",
     progressWidth: "w-full",
     destinationFilled: true,
-    destinationLabel: "",
+    destinationLabel: "Completed",
     destinationLabelClass: "text-gray-400",
   },
   cancelled: {
@@ -101,18 +107,25 @@ export default function OrderDetailView({ order, variant }: Props) {
       <div className="p-6 md:p-8">
         {/* Status Banner */}
         <div className="bg-gray-50 rounded-lg p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
-          <div>
+          <div className="flex-1 flex flex-col w-full">
             <h2 className="text-lg font-bold text-gray-800 uppercase">
               Order Type - {order?.orderType ? order.orderType.replace(/_/g, " ") : "—"}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Status -{" "}
-              <span className={`font-medium capitalize ${accent.text}`}>
-                {order?.status ?? "—"}
+              Order Number -{" "}
+              <span className={`font-medium ${accent.text}`}>{order.orderNumber}</span>
+            </p>
+          </div>
+
+          <div className="flex-1 flex flex-col sm:items-end items-start">
+            <span className={`text-xl font-bold ${accent.text}`}>{STATUS_LABEL[variant]}</span>
+            <p className="text-xs text-gray-500 mt-1">
+              Delivery Method -{" "}
+              <span className={`font-medium ${accent.text}`}>
+                {order?.customerMode ? CUSTOMER_MODE_LABEL[order.customerMode] : "—"}
               </span>
             </p>
           </div>
-          <span className={`text-xl font-bold ${accent.text}`}>{STATUS_LABEL[variant]}</span>
         </div>
 
         {/* Order List */}

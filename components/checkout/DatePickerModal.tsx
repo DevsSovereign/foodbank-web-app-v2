@@ -1,20 +1,37 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useGetPickupCalendar } from "@/lib/queries";
+import { toLocalDateKey, toLocalMonthKey } from "@/functions/formatDate";
+import type { PickupCalendarDay } from "@/types/cart";
 
-interface DatePickerModalProps {
+interface CheckoutDatePickerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectDate: (date: Date) => void;
   selectedDate: Date | null;
 }
 
-const DatePickerModal: React.FC<DatePickerModalProps> = ({
+const isSameMonth = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+
+const CheckoutDatePickerModal: React.FC<CheckoutDatePickerModalProps> = ({
   isOpen,
   onClose,
   onSelectDate,
   selectedDate,
 }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(() => new Date());
+  const { data: pickupCalendar } = useGetPickupCalendar({
+    month: toLocalMonthKey(currentMonth),
+    enabled: isOpen,
+  });
+
+  /** `YYYY-MM-DD` → day, so each calendar cell can look up its availability. */
+  const dayByDate = useMemo(() => {
+    const map = new Map<string, PickupCalendarDay>();
+    (pickupCalendar?.days ?? []).forEach((day) => map.set(day.date, day));
+    return map;
+  }, [pickupCalendar]);
 
   useEffect(() => {
     if (isOpen && selectedDate) {
@@ -27,10 +44,6 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
 
   if (!isOpen) return null;
 
-  const minSelectableDate = new Date();
-  minSelectableDate.setHours(0, 0, 0, 0);
-  minSelectableDate.setDate(minSelectableDate.getDate() + 1);
-
   const nextMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   };
@@ -39,8 +52,12 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   };
 
+  /** Availability comes solely from the calendar; unknown days stay disabled. */
   const isDateDisabled = (date: Date) => {
-    return date < minSelectableDate;
+    const dayInfo = dayByDate.get(toLocalDateKey(date));
+    if (!dayInfo) return true;
+
+    return !dayInfo.isOpen || !dayInfo.isSelectable;
   };
 
   const handleDateClick = (date: Date) => {
@@ -53,6 +70,8 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
   const renderHeader = () => {
     const monthName = currentMonth.toLocaleString("default", { month: "long" });
     const year = currentMonth.getFullYear();
+    // Nothing bookable before today, so there is nowhere to go back to.
+    const canGoBack = !isSameMonth(currentMonth, new Date());
 
     return (
       <div className="flex justify-between items-center mb-6">
@@ -61,9 +80,11 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
           <span className="text-[20px] font-bold text-gray-800">{year}</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="text-gray-500 hover:text-gray-800 transition p-1">
-            <ChevronLeft className="size-4" />
-          </button>
+          {canGoBack && (
+            <button onClick={prevMonth} className="text-gray-500 hover:text-gray-800 transition p-1">
+              <ChevronLeft className="size-4" />
+            </button>
+          )}
           <button onClick={nextMonth} className="text-gray-500 hover:text-gray-800 transition p-1">
             <ChevronRight className="size-4" />
           </button>
@@ -145,4 +166,4 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
   );
 };
 
-export default DatePickerModal;
+export default CheckoutDatePickerModal;

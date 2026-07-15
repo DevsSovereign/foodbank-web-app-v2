@@ -8,7 +8,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import EditCustomerModal from "../../components/checkout/EditCustomerModal";
 import AddPhoneNumberModal from "../../components/checkout/AddPhoneNumberModal";
-import DatePickerModal from "../../components/checkout/DatePickerModal";
+import CheckoutDatePickerModal from "../../components/checkout/DatePickerModal";
 import UserCheckoutDetails from "./user-checkout-details/UserCheckoutDetails";
 import CheckoutPaymentDetails from "./checkout-payment-details/CheckoutPaymentDetails";
 import { useUserStore } from "@/store/useUserStore";
@@ -16,7 +16,7 @@ import useUserLocation from "@/hooks/useUserLocation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cartService } from "@/lib/services/cart.service";
 import { handleError } from "@/lib/handle-error";
-import { CreateOrderPayload } from "@/types/cart";
+import { CreateOrderPayload, CustomerMode } from "@/types/cart";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import { queryKeys, useGetCustomer, useGetUserCheckoutGamification } from "@/lib/queries";
 import { useRouter } from "next/navigation";
@@ -41,11 +41,8 @@ function CheckoutPageContent() {
   const [isAddPhoneModalOpen, setIsAddPhoneModalOpen] = useState<boolean>(false);
   const [customerPhone, setCustomerPhone] = useState<string>(user?.phoneNumber ?? "");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
-  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<Date>(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow;
-  });
+  const [selectedPickupDate, setSelectedPickupDate] = useState<Date | null>(null);
+  const [customerMode, setCustomerMode] = useState<CustomerMode | null>(null);
   const { customerAddress, setCustomerAddress } = useUserLocation({ isDetectAddress: true });
   const { payableDeliveryFee, serviceFee, amountPay } = useGetCheckoutTotal();
   const { toast } = useToast();
@@ -86,8 +83,6 @@ function CheckoutPageContent() {
 
   const canShowCheckoutSpin = checkoutCategoryEligible && checkoutSpinItems.length > 0;
 
-  // Deferred tail of a successful order: only run once the prize is claimed (or
-  // the spin modal is dismissed), since the order itself is already placed.
   const finalizeCheckout = async () => {
     setIsCheckoutSpinOpen(false);
     await queryClient.invalidateQueries({ queryKey: [queryKeys.rewardHistory] });
@@ -127,6 +122,8 @@ function CheckoutPageContent() {
 
   const handleCheckout = async () => {
     if (amountPay === 0) return;
+    if (!customerMode) return;
+    if (customerMode === "pickup" && !selectedPickupDate) return;
 
     /** This is to effectively display a loading state for the use
      * gamification promise */
@@ -143,12 +140,14 @@ function CheckoutPageContent() {
     });
 
     const createOrderPayload: CreateOrderPayload = {
-      deliveryDetails: customerAddress,
+      deliveryDetails: customerMode === "home-delivery" ? customerAddress : "",
       deliveryFee: payableDeliveryFee,
       serviceFee,
       deliveryContact: customerPhone || (user?.phoneNumber as string),
-      deliveryDateOption: selectedDeliveryDate.toISOString(),
+      deliveryDateOption:
+        selectedPickupDate && customerMode === "pickup" ? selectedPickupDate.toISOString() : "",
       orderType: "outright",
+      customerMode,
       topUpAmount: 0,
       gamified,
     };
@@ -415,7 +414,9 @@ function CheckoutPageContent() {
           user={user}
           customerAddress={customerAddress}
           customerPhone={customerPhone}
-          selectedDeliveryDate={selectedDeliveryDate}
+          selectedPickupDate={selectedPickupDate}
+          customerMode={customerMode}
+          onCustomerModeChange={setCustomerMode}
           onEditCustomer={() => setIsEditCustomerModalOpen(true)}
           onEditPhone={() => setIsAddPhoneModalOpen(true)}
           onPickDate={() => setIsDatePickerOpen(true)}
@@ -433,7 +434,9 @@ function CheckoutPageContent() {
             isCreatingOrder ||
             !customerAddress ||
             //  customerAddress.toLowerCase() === "detecting your current location…" ||
-            (!user?.phoneNumber && !customerPhone)
+            (!user?.phoneNumber && !customerPhone) ||
+            !customerMode ||
+            (customerMode === "pickup" && !selectedPickupDate)
           }
           onConfirmCheckout={handleCheckout}
         />
@@ -460,11 +463,11 @@ function CheckoutPageContent() {
         onSave={(phone) => setCustomerPhone(phone)}
       />
 
-      <DatePickerModal
+      <CheckoutDatePickerModal
         isOpen={isDatePickerOpen}
         onClose={() => setIsDatePickerOpen(false)}
-        onSelectDate={setSelectedDeliveryDate}
-        selectedDate={selectedDeliveryDate}
+        onSelectDate={setSelectedPickupDate}
+        selectedDate={selectedPickupDate}
       />
 
       {/* Post-order Spin & Win — claiming (or dismissing) finalizes the checkout. */}

@@ -24,5 +24,5 @@ export default function PendingOrderPage() {
     return <ErrorSection message="Failed to load order details. Please try again later." />;
   }
 
-  return <OrderDetailView order={order} variant="pending" />;
+  return <OrderDetailView order={order} variant={order.status} />;
 }

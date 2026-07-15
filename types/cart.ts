@@ -120,18 +120,57 @@ export interface UserFirstOrder {
   message: string;
 }
 
+/** How the customer receives the order. */
+export type CustomerMode = "pickup" | "home-delivery";
+
 export interface CreateOrderPayload {
   deliveryDetails: string;
   deliveryFee: number;
   serviceFee: number;
   deliveryContact: string;
   deliveryDateOption: string;
+  customerMode: CustomerMode;
   orderType: UserResponse["accountType"];
   topUpAmount: number;
   gamified: {
     rewardId: string;
     rewardType: GamificationRewardType;
   }[];
+}
+
+export interface PickupCalendarDay {
+  closingTime: string;
+  date: string;
+  day: string;
+  isOpen: boolean;
+  isSelectable: boolean;
+  openingTime: string;
+  reason?: string;
+}
+
+export interface PickupDateResponse {
+  earliestAvailableDeliveryDate: string;
+  month: string;
+  days: PickupCalendarDay[];
+  summary: {
+    closedDays: number;
+    openDays: number;
+    selectableDays: number;
+    totalDays: number;
+  };
+}
+
+export interface PickupLocationResponse {
+  address: string;
+  contactInfo: string;
+  /** `"lat,lng"`, e.g. "7.365050,3.858738" */
+  coordinates: string;
+  createdAt: string;
+  isActive: boolean;
+  locationId: string;
+  mapLink: string;
+  storeName: string;
+  updatedAt: string;
 }
 
 export interface ApplicableFees {

@@ -152,20 +152,19 @@ function CheckoutPageContent() {
     };
 
     try {
-      console.log(createOrderPayload)
       // Tell the backend about every reward being used, not just the first.
-      // if (gamified.length > 0) {
-      //   await Promise.all(
-      //     gamified.map((reward) =>
-      //       userService.useClaimedGamification({
-      //         kind: reward.rewardType,
-      //         orderId: reward.rewardId,
-      //       }),
-      //     ),
-      //   );
-      // }
+      if (gamified.length > 0) {
+        await Promise.all(
+          gamified.map((reward) =>
+            userService.useClaimedGamification({
+              kind: reward.rewardType,
+              orderId: reward.rewardId,
+            }),
+          ),
+        );
+      }
 
-      // return mutate(createOrderPayload);
+      return mutate(createOrderPayload);
     } catch (error) {
       toast({ variant: "error", title: handleError(error) });
     } finally {

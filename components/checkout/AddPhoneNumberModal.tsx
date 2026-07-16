@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { FormEvent, useState } from "react";
 
 interface AddPhoneNumberModalProps {
   isOpen: boolean;
@@ -7,13 +7,13 @@ interface AddPhoneNumberModalProps {
 }
 
 const AddPhoneNumberModal: React.FC<AddPhoneNumberModalProps> = ({ isOpen, onClose, onSave }) => {
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSave(`+234 ${phoneNumber}`);
+    onSave(`+234${phoneNumber}`);
     onClose();
   };
 

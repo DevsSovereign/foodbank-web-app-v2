@@ -144,8 +144,7 @@ function CheckoutPageContent() {
       deliveryFee: payableDeliveryFee,
       serviceFee,
       deliveryContact: customerPhone || (user?.phoneNumber as string),
-      deliveryDateOption:
-        selectedPickupDate && customerMode === "pickup" ? selectedPickupDate.toISOString() : "",
+      deliveryDateOption: selectedPickupDate ? selectedPickupDate.toISOString() : "",
       orderType: "outright",
       customerMode,
       topUpAmount: 0,

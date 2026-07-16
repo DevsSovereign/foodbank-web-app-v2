@@ -39,7 +39,7 @@ function CheckoutPageContent() {
   const [paymentOption, setPaymentOption] = useState<"wallet" | "online">("wallet");
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState<boolean>(false);
   const [isAddPhoneModalOpen, setIsAddPhoneModalOpen] = useState<boolean>(false);
-  const [customerPhone, setCustomerPhone] = useState<string>(user?.phoneNumber ?? "");
+  const [customerPhone, setCustomerPhone] = useState<string>("");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
   const [selectedPickupDate, setSelectedPickupDate] = useState<Date | null>(null);
   const [customerMode, setCustomerMode] = useState<CustomerMode | null>(null);
@@ -110,7 +110,9 @@ function CheckoutPageContent() {
         return;
       }
 
-      await queryClient.invalidateQueries({ queryKey: [queryKeys.rewardHistory] });
+      await queryClient.invalidateQueries({
+        queryKey: [queryKeys.rewardHistory, queryKeys.getOrderHistory],
+      });
       router.replace("/dashboard/order-history");
     },
 
@@ -123,7 +125,17 @@ function CheckoutPageContent() {
   const handleCheckout = async () => {
     if (amountPay === 0) return;
     if (!customerMode) return;
-    if (customerMode === "pickup" && !selectedPickupDate) return;
+    if (customerMode && !selectedPickupDate) {
+      return toast({ variant: "error", title: "Please select a pickup date" });
+    }
+    if (!customerPhone) {
+      return toast({
+        variant: "error",
+        title: user?.phoneNumber
+          ? "Please add a second phone number for delivery"
+          : "Please add a phone number for delivery",
+      });
+    }
 
     /** This is to effectively display a loading state for the use
      * gamification promise */
@@ -143,7 +155,7 @@ function CheckoutPageContent() {
       deliveryDetails: customerMode === "home-delivery" ? customerAddress : "",
       deliveryFee: payableDeliveryFee,
       serviceFee,
-      deliveryContact: customerPhone || (user?.phoneNumber as string),
+      deliveryContact: `${user?.phoneNumber as string}, ${customerPhone}`,
       deliveryDateOption: selectedPickupDate ? selectedPickupDate.toISOString() : "",
       orderType: "outright",
       customerMode,
@@ -153,6 +165,7 @@ function CheckoutPageContent() {
 
     try {
       // Tell the backend about every reward being used, not just the first.
+
       if (gamified.length > 0) {
         await Promise.all(
           gamified.map((reward) =>

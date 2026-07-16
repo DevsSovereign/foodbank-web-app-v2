@@ -65,14 +65,7 @@ export default function UserCheckoutDetails({
           <div className="flex items-center gap-3">
             <Phone className="text-[#8cc629] w-4.5 h-4.5" />
             {user?.phoneNumber ? (
-              <div className="flex flex-row items-center gap-1">
-                <span className="text-gray-700 text-sm font-medium">
-                  {customerPhone || user?.phoneNumber}
-                </span>
-                <button type="button" onClick={onEditPhone}>
-                  <Edit className="w-4 h-4 text-[#8cc629]" />
-                </button>
-              </div>
+              <span className="text-gray-700 text-sm font-medium">{user.phoneNumber}</span>
             ) : (
               <button
                 onClick={onEditPhone}
@@ -82,6 +75,29 @@ export default function UserCheckoutDetails({
               </button>
             )}
           </div>
+
+          {user?.phoneNumber &&
+            (customerPhone ? (
+              <div className="flex items-center gap-3">
+                <Phone className="text-[#8cc629] w-4.5 h-4.5" />
+                <div className="flex flex-row items-center gap-1">
+                  <span className="text-gray-700 text-sm font-medium">{customerPhone}</span>
+                  <button type="button" onClick={onEditPhone}>
+                    <Edit className="w-4 h-4 text-[#8cc629]" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Phone className="text-[#8cc629] w-4.5 h-4.5" />
+                <button
+                  onClick={onEditPhone}
+                  className="text-[#8cc629] font-medium text-sm hover:underline"
+                >
+                  Add second phone number
+                </button>
+              </div>
+            ))}
         </div>
 
         <div className="bg-[#fff5f5] text-[#ff8080] py-3 px-5 rounded-md text-[13px] font-medium inline-block w-full">

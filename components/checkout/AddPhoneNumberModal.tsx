@@ -13,7 +13,7 @@ const AddPhoneNumberModal: React.FC<AddPhoneNumberModalProps> = ({ isOpen, onClo
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSave(`+234${phoneNumber}`);
+    onSave(`0${phoneNumber}`);
     onClose();
   };
 

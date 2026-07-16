@@ -165,7 +165,6 @@ function CheckoutPageContent() {
 
     try {
       // Tell the backend about every reward being used, not just the first.
-
       if (gamified.length > 0) {
         await Promise.all(
           gamified.map((reward) =>

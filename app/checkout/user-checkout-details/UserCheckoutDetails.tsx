@@ -93,7 +93,7 @@ export default function UserCheckoutDetails({
       <div className="bg-white border border-[#f0f9e1] rounded-lg shadow-sm overflow-hidden p-6 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
           <h2 className="text-[20px] font-bold text-gray-800">Delivery Method</h2>
-          {customerMode === "pickup" && (
+          {customerMode && (
             <button
               onClick={onPickDate}
               className="text-[#8cc629] text-[13px] font-medium flex items-center gap-1 hover:underline"
@@ -133,7 +133,7 @@ export default function UserCheckoutDetails({
           })}
         </div>
 
-        {customerMode === "pickup" && selectedPickupDate && (
+        {selectedPickupDate && (
           <div className="mt-4 border border-[#8cc629] bg-[#f4faee] rounded-md py-4 flex flex-col items-center justify-center text-center">
             <p className="text-gray-800 font-bold text-sm">
               {selectedPickupDate.toLocaleDateString("en-US", {
